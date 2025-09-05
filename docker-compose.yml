@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Frontend (Vue.js)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: log-chatbot-frontend
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Backend (tùy chọn - nếu bạn có backend)
+  backend:
+    # Thay thế bằng image backend của bạn
+    image: your-backend-image:latest
+    container_name: log-chatbot-backend
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      # Thêm các biến môi trường khác nếu cần
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  # Tạo volume nếu cần lưu trữ data
+  app-data:
