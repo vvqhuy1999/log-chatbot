@@ -1,5 +1,5 @@
 # Dockerfile cho Vue.js application
-FROM node:18-alpine as build-stage
+FROM node:22.15.1-alpine as build-stage
 
 # Set working directory
 WORKDIR /app
@@ -7,11 +7,15 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY . .
+
+# Accept build-time API base URL; default to localhost for dev
+ARG VITE_API_BASE_URL=http://localhost:8080
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 # Build the application
 RUN npm run build

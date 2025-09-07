@@ -3,7 +3,7 @@ import axios from 'axios'
 
 // Cấu hình Axios
 const api = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -28,21 +28,18 @@ export const useAuthStore = () => {
       const data = response.data
       console.log('Response data:', data)
       
-      // Xử lý user data từ nhiều format có thể có
-      let user = data.user || data
-      console.log('Raw user object:', user)
-
-      if (!user) {
-        throw new Error('Không nhận được thông tin user từ server')
+      // Xử lý response từ backend Spring Boot
+      if (!data.success) {
+        throw new Error(data.message || 'Đăng nhập thất bại')
       }
 
-      // Đảm bảo user object có đủ thông tin cần thiết
+      // Lấy user object từ response (nếu có) hoặc tạo từ username
+      let userData = data.user || data
       const processedUser = {
-        id: user.id || user.userId || Date.now(), // Fallback id nếu không có
-        name: user.name || user.fullName || user.username || 'User',
-        username: user.username || credentials.username,
-        avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.username || 'User')}&background=059669&color=fff`,
-        ...user // Giữ lại tất cả properties khác từ server
+        id: userData.id || Date.now(), // Sử dụng ID từ backend hoặc tạo tạm thời
+        name: userData.name || data.username || credentials.username,
+        username: userData.username || data.username || credentials.username,
+        avatar: userData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || data.username || credentials.username)}&background=059669&color=fff`
       }
       
       console.log('Processed user object:', processedUser)
@@ -59,24 +56,10 @@ export const useAuthStore = () => {
     } catch (error) {
       console.error('Login error:', error)
       
-      // Temporary fallback for testing if API is not available
+      // Không cho phép demo mode - yêu cầu backend thực sự hoạt động
       if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
-        console.warn('API not available, using demo mode for testing')
-        
-        const user = {
-          id: 1,
-          name: 'Demo User',
-          username: credentials.username,
-          avatar: `https://ui-avatars.com/api/?name=Demo%20User&background=059669&color=fff`
-        }
-        
-        state.user = user
-        state.isAuthenticated = true
-        
-        localStorage.setItem('chatgpt-user', JSON.stringify(user))
-        console.log('Demo user saved to localStorage:', user)
-        
-        return user
+        console.error('Backend không khả dụng. Vui lòng khởi động backend server.')
+        throw new Error('Không thể kết nối đến server. Vui lòng kiểm tra backend.')
       }
       
       const errorMessage = error.response?.data?.message || error.message || 'Đăng nhập thất bại'
@@ -99,7 +82,7 @@ export const useAuthStore = () => {
     }
   }
   
-  const checkAuth = () => {
+  const checkAuth = async () => {
     console.log('checkAuth called')
     const savedUser = localStorage.getItem('chatgpt-user')
     console.log('savedUser from localStorage:', savedUser)
@@ -112,9 +95,26 @@ export const useAuthStore = () => {
         
         // Đảm bảo parsedUser là object hợp lệ
         if (parsedUser && typeof parsedUser === 'object' && (parsedUser.id || parsedUser.username)) {
-          state.user = parsedUser
-          state.isAuthenticated = true
-          console.log('Auth restored successfully:', parsedUser)
+          // Kiểm tra với backend để xác thực session vẫn còn hiệu lực
+          try {
+            const response = await api.get('/api/auth/check', {
+              params: { username: parsedUser.username }
+            })
+            
+            if (response.data.authenticated) {
+              state.user = parsedUser
+              state.isAuthenticated = true
+              console.log('Auth restored successfully:', parsedUser)
+            } else {
+              throw new Error('Session expired')
+            }
+          } catch (error) {
+            console.log('Backend verification failed, clearing auth:', error)
+            // Nếu backend không xác thực được, xóa localStorage
+            localStorage.removeItem('chatgpt-user')
+            state.user = null
+            state.isAuthenticated = false
+          }
         } else {
           console.log('Invalid user object, removing from localStorage')
           // Nếu không phải object hợp lệ, xóa localStorage

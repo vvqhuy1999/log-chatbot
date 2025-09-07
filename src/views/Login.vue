@@ -7,7 +7,7 @@
         <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
           AI
         </div>
-        <h1 class="text-3xl font-bold text-white mb-2">ChatGPT Clone</h1>
+        <h1 class="text-3xl font-bold text-white mb-2">ChatLog</h1>
         <p class="text-gray-400">Đăng nhập để bắt đầu trò chuyện</p>
       </div>
 
