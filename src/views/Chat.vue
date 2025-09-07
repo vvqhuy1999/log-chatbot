@@ -64,7 +64,7 @@
       </div>
       
       <!-- Chat History -->
-      <div class="flex-1 overflow-y-auto px-4 pb-4">
+      <div class="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar scrollbar-dark">
         <div v-if="!sidebarCollapsed" class="mb-3">
           <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Lịch sử chat</h3>
         </div>
@@ -79,8 +79,7 @@
         <div v-if="!loadingChatHistory && chatHistory.length > 0" class="space-y-1">
           
           <div v-for="(chat, index) in chatHistory" :key="chat.sessionId || index"
-               @click="loadChat(index)"
-               :class="['group p-3 rounded-lg cursor-pointer transition-all duration-200', 
+               :class="['group p-3 rounded-lg transition-all duration-200', 
                         currentChatIndex === index 
                           ? 'bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/30' 
                           : 'hover:bg-gray-800/50 border border-transparent']"
@@ -88,21 +87,29 @@
             
             <div v-if="!sidebarCollapsed" class="space-y-1">
               <div class="flex items-start gap-3">
-                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div @click="loadChat(index)" class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                   </svg>
                 </div>
-                <div class="flex-1 min-w-0">
+                <div @click="loadChat(index)" class="flex-1 min-w-0 cursor-pointer">
                   <p class="text-sm font-medium text-white truncate leading-tight">{{ chat.title }}</p>
                   <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(chat.date) }}</p>
                 </div>
+                <!-- Delete button -->
+                <button @click.stop="deleteSession(chat.sessionId, index)"
+                        class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded hover:bg-red-600/20 text-red-400 hover:text-red-300"
+                        :title="'Xóa cuộc trò chuyện'">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
               </div>
             </div>
             
             <!-- Icon for collapsed state -->
             <div v-if="sidebarCollapsed" class="flex justify-center">
-              <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <div @click="loadChat(index)" class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center cursor-pointer">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                 </svg>
@@ -166,7 +173,7 @@
       </div>
 
       <!-- Messages Container -->
-      <div class="flex-1 overflow-y-auto min-h-0" ref="messagesContainer">
+      <div class="flex-1 overflow-y-auto min-h-0 custom-scrollbar" :class="isDark ? 'scrollbar-dark' : 'scrollbar-light'" ref="messagesContainer">
         <div class="max-w-4xl mx-auto">
           
           <!-- Welcome Message (when no messages) -->
@@ -188,9 +195,9 @@
               <!-- User Messages (Right Side) -->
               <div v-if="message.role === 'user'" 
                    class="flex justify-end mb-4">
-                <div class="max-w-xs lg:max-w-md">
+                <div class="w-3/4">
                   <div class="bg-green-500 text-white rounded-lg px-4 py-2 shadow-sm">
-                    <p class="text-sm whitespace-pre-wrap">{{ message.content }}</p>
+                    <p class="text-base font-medium whitespace-pre-wrap">{{ message.content }}</p>
                   </div>
                   <div class="text-xs text-gray-500 mt-1 text-right">
                     {{ formatMessageTime(message.timestamp) }}
@@ -201,7 +208,7 @@
               <!-- AI Messages (Left Side) -->
               <div v-else 
                    class="flex justify-start mb-4">
-                <div class="flex gap-3 max-w-xs lg:max-w-md">
+                <div class="flex gap-3 w-full">
                   <!-- AI Avatar -->
                   <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,9 +218,12 @@
                   
                   <!-- AI Message Content -->
                   <div class="flex-1">
-                    <div class="bg-white dark:bg-gray-700 rounded-lg px-4 py-2 shadow-sm border border-gray-200 dark:border-gray-600">
-                      <p class="text-sm whitespace-pre-wrap" 
-                         :class="isDark ? 'text-gray-100' : 'text-gray-900'">{{ message.content }}</p>
+                    <div class="rounded-lg px-4 py-3 shadow-sm border"
+                         :class="isDark 
+                           ? 'bg-gray-700 border-gray-600' 
+                           : 'bg-white border-gray-200'">
+                      <div class="text-sm leading-relaxed whitespace-pre-wrap" 
+                           :class="isDark ? 'text-gray-100' : 'text-gray-900'">{{ message.content }}</div>
                     </div>
                     <div class="text-xs text-gray-500 mt-1">
                       {{ formatMessageTime(message.timestamp) }}
@@ -275,18 +285,18 @@
                 v-model="input"
                 @keydown.enter.exact.prevent="sendMessage"
                 @keydown.enter.shift.exact="insertNewLine"
+                @input="adjustTextareaHeight"
                 ref="messageInput"
                 placeholder="Nhập tin nhắn..."
                 rows="1"
                 :disabled="loading"
-                class="w-full resize-none rounded-xl border px-4 py-3 pr-12 text-base outline-none transition-all focus:ring-2 focus:ring-green-500"
+                class="w-full resize-none rounded-xl border px-4 py-3 pr-12 text-base outline-none transition-all focus:ring-2 focus:ring-green-500 overflow-y-auto custom-scrollbar"
                 :class="[
                   isDark 
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-green-500' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500',
-                  'max-h-36 overflow-y-auto'
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-green-500 scrollbar-dark' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 scrollbar-light'
                 ]"
-                style="min-height: 48px; line-height: 1.5;"
+                style="min-height: 48px; max-height: 300px; line-height: 1.5;"
               ></textarea>
               
               <!-- Send Button -->
@@ -336,7 +346,7 @@ import axios from 'axios'
 
 // Create API instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: '',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -352,6 +362,16 @@ export default {
     const messages = ref([])
     const loading = ref(false)
     const isDark = ref(true)
+    
+    // Load theme from localStorage on mount
+    onMounted(() => {
+      const savedTheme = localStorage.getItem('chatgpt-theme')
+      if (savedTheme !== null) {
+        isDark.value = savedTheme === 'dark'
+      }
+      // Apply theme to html element
+      document.documentElement.classList.toggle('dark', isDark.value)
+    })
     const sidebarCollapsed = ref(false)
     const messagesContainer = ref(null)
     const messageInput = ref(null)
@@ -360,6 +380,7 @@ export default {
     const loadingChatHistory = ref(false)
     const loadingMessages = ref(false)
     const currentChatIndex = ref(null)
+    const currentSessionId = ref(null)
     
     const user = computed(() => authState.user)
     
@@ -424,51 +445,238 @@ export default {
       })
     })
     
+    // Start new chat session
+    const startNewSession = async (content) => {
+      try {
+        console.log('Creating new session with content:', content)
+        const response = await api.post('/api/chat-sessions/start', {
+          content: content
+        })
+        
+        if (response.data && response.data.sessionId) {
+          currentSessionId.value = response.data.sessionId
+          console.log('New session created:', response.data)
+          
+          // Wait a bit for backend to process and generate initial AI response
+          console.log('Waiting for initial AI response...')
+          
+          // Poll for messages in the new session
+          let attempts = 0
+          const maxAttempts = 10
+          
+          const pollForInitialResponse = async () => {
+            attempts++
+            console.log(`Polling for initial response attempt ${attempts}/${maxAttempts}`)
+            
+            const latestMessages = await getLatestMessages(response.data.sessionId)
+            
+            // Check if we have any messages (including AI response)
+            if (latestMessages.length > 0) {
+              console.log('Initial AI response received!')
+              
+              // Update current messages
+              messages.value = latestMessages
+              
+              // Reload chat sessions to get updated list and set active session
+              await loadChatSessions()
+              
+              // Find and set the active session
+              const sessionIndex = chatHistory.value.findIndex(session => session.sessionId === response.data.sessionId)
+              if (sessionIndex !== -1) {
+                currentChatIndex.value = sessionIndex
+                console.log('Set active session index:', sessionIndex)
+              }
+              
+              // Stop loading
+              loading.value = false
+              
+              // Reset textarea height after loading is complete
+              nextTick(() => {
+                resetTextareaHeight()
+              })
+              
+              return response.data.sessionId
+            }
+            
+            // If max attempts reached, still set up session
+            if (attempts >= maxAttempts) {
+              console.log('Max polling attempts reached for initial response')
+              
+              // Reload chat sessions
+              await loadChatSessions()
+              
+              // Find and set the active session
+              const sessionIndex = chatHistory.value.findIndex(session => session.sessionId === response.data.sessionId)
+              if (sessionIndex !== -1) {
+                currentChatIndex.value = sessionIndex
+                console.log('Set active session index:', sessionIndex)
+              }
+              
+              // Stop loading
+              loading.value = false
+              
+              // Reset textarea height after loading is complete
+              nextTick(() => {
+                resetTextareaHeight()
+              })
+              
+              return response.data.sessionId
+            }
+            
+            // Continue polling after 2 seconds
+            setTimeout(pollForInitialResponse, 2000)
+          }
+          
+          // Start polling after 1 second
+          setTimeout(pollForInitialResponse, 1000)
+          
+          return response.data.sessionId
+        }
+      } catch (error) {
+        console.error('Error starting new session:', error)
+        loading.value = false
+      }
+      return null
+    }
+
+    // Send message to API
+    const sendMessageToAPI = async (sessionId, content) => {
+      try {
+        const response = await api.post(`/api/chat-messages/${sessionId}`, {
+          sender: "USER",
+          content: content
+        })
+        
+        console.log('Message sent to API:', response.data)
+        return response.data
+      } catch (error) {
+        console.error('Error sending message to API:', error)
+        return null
+      }
+    }
+
+    // Get latest messages from API
+    const getLatestMessages = async (sessionId) => {
+      try {
+        const response = await api.get(`/api/chat-sessions/${sessionId}/messages`)
+        
+        if (response.data && Array.isArray(response.data)) {
+          // Transform API messages to match our format
+          const apiMessages = response.data.map(msg => ({
+            id: msg.messageId || Date.now() + Math.random(),
+            content: msg.content,
+            role: msg.sender === 'USER' ? 'user' : 'assistant',
+            timestamp: new Date(msg.timestamp)
+          }))
+          
+          console.log(`Retrieved ${apiMessages.length} messages from API`)
+          return apiMessages
+        }
+        return []
+      } catch (error) {
+        console.error('Error getting latest messages:', error)
+        return []
+      }
+    }
+
     // Methods tương tự như component cũ
     const sendMessage = async () => {
       if (!input.value.trim() || loading.value) return
 
+      const userInput = input.value.trim()
+      
+      // If this is the first message and no session exists, start a new session
+      if (!currentSessionId.value && messages.value.length === 0) {
+        console.log('Starting new session for first message...')
+        
+        // Don't add user message to UI yet, wait for session creation and AI response
+        input.value = ''
+        loading.value = true
+        
+        const sessionId = await startNewSession(userInput)
+        if (!sessionId) {
+          console.error('Failed to create new session')
+          loading.value = false
+          return
+        }
+        
+        // Session created successfully, loading will be handled by startNewSession polling
+        return
+      }
+
+      // Add user message to UI immediately
       messages.value.push({ 
         role: 'user', 
-        content: input.value.trim(),
+        content: userInput,
         timestamp: new Date()
       })
       
-      const userInput = input.value.trim()
       input.value = ''
       loading.value = true
 
-      adjustTextareaHeight()
+      // Reset textarea height to default after sending
+      nextTick(() => {
+        resetTextareaHeight()
+        // Double check after a short delay
+        setTimeout(() => {
+          resetTextareaHeight()
+        }, 100)
+      })
       scrollToBottom()
 
-      setTimeout(() => {
-        let response = generateSmartResponse(userInput)
+      // Send message to API if we have a session ID
+      if (currentSessionId.value) {
+        console.log(`Sending message to session ${currentSessionId.value}:`, userInput)
         
-        messages.value.push({
-          role: 'assistant',
-          content: response,
-          timestamp: new Date()
-        })
+        // Send user message to API
+        const apiResponse = await sendMessageToAPI(currentSessionId.value, userInput)
         
+        if (apiResponse) {
+          // Wait a bit for backend to process and generate AI response
+          console.log('Waiting for AI response...')
+          
+          // Poll for new messages every 2 seconds, max 10 times (20 seconds total)
+          let attempts = 0
+          const maxAttempts = 10
+          
+          const pollForResponse = async () => {
+            attempts++
+            console.log(`Polling attempt ${attempts}/${maxAttempts}`)
+            
+            const latestMessages = await getLatestMessages(currentSessionId.value)
+            
+            // Check if we have more messages than before (including AI response)
+            if (latestMessages.length > messages.value.length) {
+              console.log('AI response received!')
+              messages.value = latestMessages
+              loading.value = false
+              scrollToBottom()
+              updateChatHistory()
+              return
+            }
+            
+            // If max attempts reached, stop polling
+            if (attempts >= maxAttempts) {
+              console.log('Max polling attempts reached, stopping...')
+              loading.value = false
+              return
+            }
+            
+            // Continue polling after 2 seconds
+            setTimeout(pollForResponse, 2000)
+          }
+          
+          // Start polling after 1 second
+          setTimeout(pollForResponse, 1000)
+        } else {
+          loading.value = false
+        }
+      } else {
+        // Fallback if no session ID
         loading.value = false
-        scrollToBottom()
-        updateChatHistory()
-      }, 1000 + Math.random() * 2000)
+      }
     }
     
-    const generateSmartResponse = (input) => {
-      const lowerInput = input.toLowerCase()
-      
-      if (lowerInput.includes('xin chào') || lowerInput.includes('hello') || lowerInput.includes('chào')) {
-        return `Xin chào ${user.value.name}! Tôi là AI Assistant. Tôi có thể giúp gì cho bạn hôm nay?`
-      }
-      
-      if (lowerInput.includes('ai') && lowerInput.includes('là gì')) {
-        return 'AI (Artificial Intelligence - Trí tuệ nhân tạo) là khả năng của máy tính thực hiện các nhiệm vụ thường đòi hỏi trí thông minh của con người, như nhận dạng hình ảnh, xử lý ngôn ngữ tự nhiên, và ra quyết định.'
-      }
-      
-      return `Tôi hiểu bạn đang quan tâm đến "${input}". Đây là một chủ đề thú vị! Bạn có thể chia sẻ thêm chi tiết hoặc đặt câu hỏi cụ thể để tôi có thể hỗ trợ bạn tốt hơn không?`
-    }
     
     const scrollToBottom = () => {
       nextTick(() => {
@@ -482,9 +690,39 @@ export default {
     const adjustTextareaHeight = () => {
       const textarea = messageInput.value
       if (textarea) {
-        textarea.style.height = '48px'
-        const newHeight = Math.min(textarea.scrollHeight, 144)
+        // Reset height to auto to get the correct scrollHeight
+        textarea.style.height = 'auto'
+        
+        // Calculate new height with min and max constraints
+        const minHeight = 48 // 48px minimum
+        const maxHeight = 300 // 300px maximum
+        const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)
+        
+        // Set the new height
         textarea.style.height = newHeight + 'px'
+        
+        // If content exceeds max height, show scrollbar
+        if (textarea.scrollHeight > maxHeight) {
+          textarea.style.overflowY = 'auto'
+        } else {
+          textarea.style.overflowY = 'hidden'
+        }
+      }
+    }
+
+    const resetTextareaHeight = () => {
+      const textarea = messageInput.value
+      if (textarea) {
+        // Force reset to default height
+        textarea.style.height = '48px'
+        textarea.style.overflowY = 'hidden'
+        textarea.style.minHeight = '48px'
+        textarea.style.maxHeight = '300px'
+        
+        // Force reflow to ensure the change takes effect
+        textarea.offsetHeight
+        
+        console.log('Textarea height reset to 48px, current height:', textarea.style.height)
       }
     }
     
@@ -505,6 +743,8 @@ export default {
     const toggleTheme = () => {
       isDark.value = !isDark.value
       localStorage.setItem('chatgpt-theme', isDark.value ? 'dark' : 'light')
+      // Apply theme to html element
+      document.documentElement.classList.toggle('dark', isDark.value)
     }
     
     const toggleSidebar = () => {
@@ -516,6 +756,7 @@ export default {
       console.log('🆕 Creating new chat...')
       messages.value = []
       currentChatIndex.value = null
+      currentSessionId.value = null
       input.value = ''
       // Reload chat sessions to get any new ones
       console.log('🔄 Reloading chat sessions after new chat...')
@@ -525,6 +766,9 @@ export default {
     const loadChat = async (index) => {
       currentChatIndex.value = index
       const chat = chatHistory.value[index]
+      
+      // Set current session ID when loading an existing chat
+      currentSessionId.value = chat.sessionId
       
       // Show loading state for messages
       loadingMessages.value = true
@@ -568,20 +812,17 @@ export default {
     }
     
     const updateChatHistory = () => {
-      if (messages.value.length >= 2) {
-        const title = messages.value[0].content.substring(0, 50) + '...'
-        const newChat = {
-          title,
-          date: new Date(),
-          messages: [...messages.value]
+      if (messages.value.length >= 2 && currentChatIndex.value !== null) {
+        // Update the existing session in chat history with new messages
+        const updatedChat = {
+          ...chatHistory.value[currentChatIndex.value],
+          messages: [...messages.value],
+          lastActiveAt: new Date(),
+          date: new Date()
         }
         
-        if (currentChatIndex.value === null) {
-          chatHistory.value.unshift(newChat)
-          currentChatIndex.value = 0
-        } else {
-          chatHistory.value[currentChatIndex.value] = newChat
-        }
+        chatHistory.value[currentChatIndex.value] = updatedChat
+        console.log('Updated chat history for session:', updatedChat.sessionId)
       }
     }
     
@@ -620,6 +861,36 @@ export default {
       }
     }
     
+    // Delete chat session
+    const deleteSession = async (sessionId, index) => {
+      if (!confirm('Bạn có chắc chắn muốn xóa cuộc trò chuyện này?')) {
+        return
+      }
+      
+      try {
+        console.log(`Deleting session ${sessionId}...`)
+        await api.delete(`/api/chat-sessions/${sessionId}`)
+        
+        // Remove from local chat history
+        chatHistory.value.splice(index, 1)
+        
+        // If deleted session was active, clear current chat
+        if (currentChatIndex.value === index) {
+          messages.value = []
+          currentChatIndex.value = null
+          currentSessionId.value = null
+        } else if (currentChatIndex.value > index) {
+          // Adjust current index if deleted session was before current
+          currentChatIndex.value--
+        }
+        
+        console.log(`Session ${sessionId} deleted successfully`)
+      } catch (error) {
+        console.error('Error deleting session:', error)
+        alert('Có lỗi xảy ra khi xóa cuộc trò chuyện. Vui lòng thử lại.')
+      }
+    }
+
     const handleLogout = async () => {
       console.log('Logout button clicked')
       try {
@@ -645,15 +916,18 @@ export default {
       chatHistory,
       loadingChatHistory,
       currentChatIndex,
+      currentSessionId,
       user,
       sendMessage,
       scrollToBottom,
       adjustTextareaHeight,
+      resetTextareaHeight,
       insertNewLine,
       toggleTheme,
       toggleSidebar,
       newChat,
       loadChat,
+      deleteSession,
       formatDate,
       formatMessageTime,
       copyMessage,
@@ -663,3 +937,57 @@ export default {
 }
 
 </script>
+
+<style scoped>
+/* Custom scrollbar styles */
+.custom-scrollbar {
+  scrollbar-width: thin;
+}
+
+/* Dark theme scrollbar */
+.scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: #374151; /* gray-700 */
+  border-radius: 4px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #6b7280; /* gray-500 */
+  border-radius: 4px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af; /* gray-400 */
+}
+
+/* Light theme scrollbar */
+.scrollbar-light::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-light::-webkit-scrollbar-track {
+  background: #f3f4f6; /* gray-100 */
+  border-radius: 4px;
+}
+
+.scrollbar-light::-webkit-scrollbar-thumb {
+  background: #d1d5db; /* gray-300 */
+  border-radius: 4px;
+}
+
+.scrollbar-light::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af; /* gray-400 */
+}
+
+/* Firefox scrollbar */
+.custom-scrollbar {
+  scrollbar-color: #6b7280 #374151; /* thumb track for dark */
+}
+
+.scrollbar-light {
+  scrollbar-color: #d1d5db #f3f4f6; /* thumb track for light */
+}
+</style>
