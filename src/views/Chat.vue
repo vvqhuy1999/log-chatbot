@@ -268,7 +268,9 @@
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
                   </div>
-                  <span class="text-sm text-gray-500">AI đang soạn phản hồi...</span>
+                  <span class="text-sm text-gray-500">
+                    {{ retrying ? 'Đang thử lại kết nối...' : 'AI đang soạn phản hồi...' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -346,8 +348,8 @@ import axios from 'axios'
 
 // Create API instance
 const api = axios.create({
-  baseURL: '',
-  timeout: 10000,
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  timeout: 30000, // Tăng timeout lên 30 giây
   headers: {
     'Content-Type': 'application/json'
   }
@@ -381,6 +383,7 @@ export default {
     const loadingMessages = ref(false)
     const currentChatIndex = ref(null)
     const currentSessionId = ref(null)
+    const retrying = ref(false)
     
     const user = computed(() => authState.user)
     
@@ -539,8 +542,10 @@ export default {
       return null
     }
 
-    // Send message to API
-    const sendMessageToAPI = async (sessionId, content) => {
+    // Send message to API with retry mechanism
+    const sendMessageToAPI = async (sessionId, content, retryCount = 0) => {
+      const maxRetries = 2
+      
       try {
         const response = await api.post(`/api/chat-messages/${sessionId}`, {
           sender: "USER",
@@ -548,15 +553,40 @@ export default {
         })
         
         console.log('Message sent to API:', response.data)
+        retrying.value = false
         return response.data
       } catch (error) {
-        console.error('Error sending message to API:', error)
+        console.error(`Error sending message to API (attempt ${retryCount + 1}):`, error)
+        
+        // Retry on timeout or network errors
+        if (retryCount < maxRetries && (error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR')) {
+          retrying.value = true
+          console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`)
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          return sendMessageToAPI(sessionId, content, retryCount + 1)
+        }
+        
+        retrying.value = false
+        
+        // Show user-friendly error message
+        if (error.code === 'ECONNABORTED') {
+          alert('Kết nối bị timeout. Vui lòng kiểm tra kết nối mạng và thử lại.')
+        } else if (error.response?.status === 500) {
+          alert('Lỗi server. Vui lòng thử lại sau.')
+        } else if (error.response?.status === 404) {
+          alert('Session không tồn tại. Vui lòng tạo cuộc trò chuyện mới.')
+        } else {
+          alert('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại.')
+        }
+        
         return null
       }
     }
 
-    // Get latest messages from API
-    const getLatestMessages = async (sessionId) => {
+    // Get latest messages from API with retry mechanism
+    const getLatestMessages = async (sessionId, retryCount = 0) => {
+      const maxRetries = 2
+      
       try {
         const response = await api.get(`/api/chat-sessions/${sessionId}/messages`)
         
@@ -574,7 +604,15 @@ export default {
         }
         return []
       } catch (error) {
-        console.error('Error getting latest messages:', error)
+        console.error(`Error getting latest messages (attempt ${retryCount + 1}):`, error)
+        
+        // Retry on timeout or network errors
+        if (retryCount < maxRetries && (error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR')) {
+          console.log(`Retrying get messages in 1 second... (${retryCount + 1}/${maxRetries})`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          return getLatestMessages(sessionId, retryCount + 1)
+        }
+        
         return []
       }
     }
@@ -909,6 +947,7 @@ export default {
       messages,
       loading,
       loadingMessages,
+      retrying,
       isDark,
       sidebarCollapsed,
       messagesContainer,

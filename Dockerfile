@@ -1,36 +1,36 @@
-# Dockerfile cho Vue.js application
-FROM node:22.15.1-alpine as build-stage
+# Dockerfile cho ứng dụng Vue.js
+FROM node:22.15.1-alpine as build-stage # Stage build với Node.js 22 trên Alpine
 
-# Set working directory
-WORKDIR /app
+# Đặt thư mục làm việc
+WORKDIR /app # Các lệnh sau chạy trong /app
 
-# Copy package files
-COPY package*.json ./
+# Sao chép file package
+COPY package*.json ./ # Sao chép file package trước để tận dụng cache layer của Docker
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci
+# Cài đặt tất cả phụ thuộc (kể cả devDependencies để build)
+RUN npm ci # Cài sạch phụ thuộc dựa trên package-lock.json
 
-# Copy source code
-COPY . .
+# Sao chép mã nguồn
+COPY . . # Sao chép toàn bộ dự án vào image
 
-# Accept build-time API base URL; default to localhost for dev
-ARG VITE_API_BASE_URL=http://localhost:8080
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+# Nhận biến API base URL lúc build; mặc định dùng localhost khi dev
+ARG VITE_API_BASE_URL=http://localhost:8080 # Định nghĩa biến tại thời điểm build (mặc định)
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} # Đặt biến môi trường cho quá trình build
 
-# Build the application
-RUN npm run build
+# Build ứng dụng
+RUN npm run build # Sinh ra tài nguyên production trong /dist
 
-# Production stage
-FROM nginx:alpine as production-stage
+# Stage chạy production
+FROM nginx:alpine as production-stage # Dùng Nginx để phục vụ file tĩnh
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+# Sao chép cấu hình nginx tuỳ chỉnh
+COPY nginx.conf /etc/nginx/nginx.conf # Dùng cấu hình có rule proxy
 
-# Copy built app from build stage
-COPY --from=build-stage /app/dist /usr/share/nginx/html
+# Sao chép app đã build từ stage build
+COPY --from=build-stage /app/dist /usr/share/nginx/html # Đưa file build vào web root của Nginx
 
-# Expose port 80
-EXPOSE 80
+# Mở cổng 80
+EXPOSE 80 # Container lắng nghe cổng 80
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Khởi động nginx
+CMD ["nginx", "-g", "daemon off;"] # Chạy Nginx ở foreground (không tách daemon)

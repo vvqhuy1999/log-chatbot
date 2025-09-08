@@ -6,8 +6,6 @@
 - `nginx.conf` - Cấu hình Nginx với proxy API
 - `docker-compose.yml` - Orchestration cho frontend và backend
 - `.dockerignore` - Exclude files không cần thiết
-- `deploy.sh` - Script deploy cho Linux/Mac
-- `deploy.bat` - Script deploy cho Windows
 
 ## 🚀 Deployment Instructions
 
