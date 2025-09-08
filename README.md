@@ -119,11 +119,11 @@ Xem [DEPLOYMENT.md](./DEPLOYMENT.md) để biết hướng dẫn deploy chi ti�
    - **POST** `/api/auth/login`
    - Body:
      ```json
-     {"username":"tanhpt", "password":"admin123"}
+     {"username":"...", "password":"..."}
      ```
    - Response mẫu:
      ```json
-     {"success": true, "message": "Đăng nhập thành công", "username": "tanhpt"}
+     {"success": true, "message": "Đăng nhập thành công", "username": "..."}
      ```
    - Frontend sử dụng: `src/stores/auth.js` → `login(credentials)`
 
@@ -131,7 +131,7 @@ Xem [DEPLOYMENT.md](./DEPLOYMENT.md) để biết hướng dẫn deploy chi ti�
    - **GET** `/api/auth/check?username=<username>`
    - Response mẫu:
      ```json
-     {"authenticated": true, "message": "Đã đăng nhập", "username": "tanhpt"}
+     {"authenticated": true, "message": "Đã đăng nhập", "username": "..."}
      ```
    - Frontend sử dụng: `src/stores/auth.js` → `checkAuth()`
 
