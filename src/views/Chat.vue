@@ -349,7 +349,7 @@ import axios from 'axios'
 // Create API instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
-  timeout: 30000, // Tăng timeout lên 30 giây
+  timeout: 600000, // 10 phút
   headers: {
     'Content-Type': 'application/json'
   }
@@ -384,6 +384,10 @@ export default {
     const currentChatIndex = ref(null)
     const currentSessionId = ref(null)
     const retrying = ref(false)
+    
+    // Polling configuration: 10 minutes total, 2s interval
+    const POLL_INTERVAL_MS = 2000
+    const MAX_POLL_DURATION_MS = 10 * 60 * 1000
     
     const user = computed(() => authState.user)
     
@@ -463,9 +467,9 @@ export default {
           // Wait a bit for backend to process and generate initial AI response
           console.log('Waiting for initial AI response...')
           
-          // Poll for messages in the new session
+          // Poll for messages in the new session (up to 10 minutes)
           let attempts = 0
-          const maxAttempts = 10
+          const maxAttempts = Math.ceil(MAX_POLL_DURATION_MS / POLL_INTERVAL_MS)
           
           const pollForInitialResponse = async () => {
             attempts++
@@ -526,8 +530,8 @@ export default {
               return response.data.sessionId
             }
             
-            // Continue polling after 2 seconds
-            setTimeout(pollForInitialResponse, 2000)
+            // Continue polling after interval
+            setTimeout(pollForInitialResponse, POLL_INTERVAL_MS)
           }
           
           // Start polling after 1 second
@@ -673,9 +677,9 @@ export default {
           // Wait a bit for backend to process and generate AI response
           console.log('Waiting for AI response...')
           
-          // Poll for new messages every 2 seconds, max 10 times (20 seconds total)
+          // Poll for new messages every 2 seconds, up to 10 minutes total
           let attempts = 0
-          const maxAttempts = 10
+          const maxAttempts = Math.ceil(MAX_POLL_DURATION_MS / POLL_INTERVAL_MS)
           
           const pollForResponse = async () => {
             attempts++
@@ -700,8 +704,8 @@ export default {
               return
             }
             
-            // Continue polling after 2 seconds
-            setTimeout(pollForResponse, 2000)
+            // Continue polling after interval
+            setTimeout(pollForResponse, POLL_INTERVAL_MS)
           }
           
           // Start polling after 1 second
