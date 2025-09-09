@@ -470,6 +470,7 @@ export default {
           // Poll for messages in the new session (up to 10 minutes)
           let attempts = 0
           const maxAttempts = Math.ceil(MAX_POLL_DURATION_MS / POLL_INTERVAL_MS)
+          const pollStartTime = Date.now()
           
           const pollForInitialResponse = async () => {
             attempts++
@@ -505,9 +506,9 @@ export default {
               return response.data.sessionId
             }
             
-            // If max attempts reached, still set up session
-            if (attempts >= maxAttempts) {
-              console.log('Max polling attempts reached for initial response')
+            // If max polling duration reached, still set up session
+            if (Date.now() - pollStartTime >= MAX_POLL_DURATION_MS) {
+              console.log('Max polling duration reached for initial response (timeout)')
               
               // Reload chat sessions
               await loadChatSessions()
@@ -680,6 +681,7 @@ export default {
           // Poll for new messages every 2 seconds, up to 10 minutes total
           let attempts = 0
           const maxAttempts = Math.ceil(MAX_POLL_DURATION_MS / POLL_INTERVAL_MS)
+          const pollStartTime = Date.now()
           
           const pollForResponse = async () => {
             attempts++
@@ -697,9 +699,9 @@ export default {
               return
             }
             
-            // If max attempts reached, stop polling
-            if (attempts >= maxAttempts) {
-              console.log('Max polling attempts reached, stopping...')
+            // If max polling duration reached, stop polling
+            if (Date.now() - pollStartTime >= MAX_POLL_DURATION_MS) {
+              console.log('Max polling duration reached (timeout), stopping...')
               loading.value = false
               return
             }
