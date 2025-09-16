@@ -222,8 +222,9 @@
                          :class="isDark 
                            ? 'bg-gray-700 border-gray-600' 
                            : 'bg-white border-gray-200'">
-                      <div class="text-sm leading-relaxed whitespace-pre-wrap" 
-                           :class="isDark ? 'text-gray-100' : 'text-gray-900'">{{ message.content }}</div>
+                      <div class="text-sm leading-relaxed markdown-content" 
+                           :class="isDark ? 'text-gray-100' : 'text-gray-900'"
+                           v-html="renderMarkdown(message.content)"></div>
                     </div>
                     <div class="text-xs text-gray-500 mt-1">
                       {{ formatMessageTime(message.timestamp) }}
@@ -268,7 +269,9 @@
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
                     <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
                   </div>
-                  <span class="text-sm text-gray-500">AI đang soạn phản hồi...</span>
+                  <span class="text-sm text-gray-500">
+                    {{ retrying ? 'Đang thử lại kết nối...' : 'AI đang soạn phản hồi...' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -343,11 +346,12 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
+import { marked } from 'marked'
 
 // Create API instance
 const api = axios.create({
-  baseURL: '',
-  timeout: 10000,
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  timeout: 600000, // Tăng timeout lên 10 phút
   headers: {
     'Content-Type': 'application/json'
   }
@@ -381,6 +385,7 @@ export default {
     const loadingMessages = ref(false)
     const currentChatIndex = ref(null)
     const currentSessionId = ref(null)
+    const retrying = ref(false)
     
     const user = computed(() => authState.user)
     
@@ -399,7 +404,7 @@ export default {
             createdAt: new Date(session.createdAt),
             lastActiveAt: new Date(session.lastActiveAt),
             messages: [] // Messages will be loaded separately when needed
-          }))
+          })).sort((a, b) => b.lastActiveAt - a.lastActiveAt) // Sort by lastActiveAt descending (newest first)
         } else {
           chatHistory.value = []
         }
@@ -443,6 +448,74 @@ export default {
           adjustTextareaHeight()
         }
       })
+      
+      // Setup global copy function for code blocks with fallback
+      window.copyCodeBlock = async (codeId) => {
+        try {
+          const codeElement = document.getElementById(codeId)
+          if (!codeElement) return
+          
+          const text = codeElement.textContent
+          let copySuccess = false
+          
+          // Method 1: Modern Clipboard API (requires HTTPS or localhost)
+          if (navigator.clipboard && window.isSecureContext) {
+            try {
+              await navigator.clipboard.writeText(text)
+              copySuccess = true
+            } catch (e) {
+              console.log('Clipboard API failed, trying fallback:', e)
+            }
+          }
+          
+          // Method 2: Fallback for HTTP or older browsers
+          if (!copySuccess) {
+            try {
+              // Create temporary textarea
+              const textArea = document.createElement('textarea')
+              textArea.value = text
+              textArea.style.position = 'fixed'
+              textArea.style.left = '-999999px'
+              textArea.style.top = '-999999px'
+              document.body.appendChild(textArea)
+              textArea.focus()
+              textArea.select()
+              
+              // Try execCommand
+              copySuccess = document.execCommand('copy')
+              document.body.removeChild(textArea)
+            } catch (e) {
+              console.error('Fallback copy method failed:', e)
+            }
+          }
+          
+          // Show feedback
+          const copyButton = codeElement.closest('.code-block-container').querySelector('.copy-button')
+          if (copyButton) {
+            const originalText = copyButton.innerHTML
+            if (copySuccess) {
+              copyButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>Copied!'
+            } else {
+              copyButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"></path></svg>Failed!'
+            }
+            setTimeout(() => {
+              copyButton.innerHTML = originalText
+            }, 2000)
+          }
+          
+        } catch (error) {
+          console.error('Failed to copy code:', error)
+          // Show error feedback
+          const copyButton = document.querySelector(`#${codeId}`)?.closest('.code-block-container')?.querySelector('.copy-button')
+          if (copyButton) {
+            const originalText = copyButton.innerHTML
+            copyButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"></path></svg>Error!'
+            setTimeout(() => {
+              copyButton.innerHTML = originalText
+            }, 2000)
+          }
+        }
+      }
     })
     
     // Start new chat session
@@ -539,8 +612,10 @@ export default {
       return null
     }
 
-    // Send message to API
-    const sendMessageToAPI = async (sessionId, content) => {
+    // Send message to API with retry mechanism
+    const sendMessageToAPI = async (sessionId, content, retryCount = 0) => {
+      const maxRetries = 1 // Giảm từ 2 xuống 1 để tránh retry quá nhiều
+      
       try {
         const response = await api.post(`/api/chat-messages/${sessionId}`, {
           sender: "USER",
@@ -548,15 +623,40 @@ export default {
         })
         
         console.log('Message sent to API:', response.data)
+        retrying.value = false
         return response.data
       } catch (error) {
-        console.error('Error sending message to API:', error)
+        console.error(`Error sending message to API (attempt ${retryCount + 1}):`, error)
+        
+        // Retry chỉ với network errors, không retry với timeout
+        if (retryCount < maxRetries && error.code === 'NETWORK_ERROR' && error.code !== 'ECONNABORTED') {
+          retrying.value = true
+          console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`)
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          return sendMessageToAPI(sessionId, content, retryCount + 1)
+        }
+        
+        retrying.value = false
+        
+        // Show user-friendly error message
+        if (error.code === 'ECONNABORTED') {
+          alert('Kết nối bị timeout. Server có thể đang xử lý, vui lòng đợi hoặc thử lại sau.')
+        } else if (error.response?.status === 500) {
+          alert('Lỗi server. Vui lòng thử lại sau.')
+        } else if (error.response?.status === 404) {
+          alert('Session không tồn tại. Vui lòng tạo cuộc trò chuyện mới.')
+        } else {
+          alert('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại.')
+        }
+        
         return null
       }
     }
 
-    // Get latest messages from API
-    const getLatestMessages = async (sessionId) => {
+    // Get latest messages from API with retry mechanism
+    const getLatestMessages = async (sessionId, retryCount = 0) => {
+      const maxRetries = 1 // Giảm từ 2 xuống 1
+      
       try {
         const response = await api.get(`/api/chat-sessions/${sessionId}/messages`)
         
@@ -574,7 +674,15 @@ export default {
         }
         return []
       } catch (error) {
-        console.error('Error getting latest messages:', error)
+        console.error(`Error getting latest messages (attempt ${retryCount + 1}):`, error)
+        
+        // Retry chỉ với network errors, không retry với timeout
+        if (retryCount < maxRetries && error.code === 'NETWORK_ERROR' && error.code !== 'ECONNABORTED') {
+          console.log(`Retrying get messages in 1 second... (${retryCount + 1}/${maxRetries})`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          return getLatestMessages(sessionId, retryCount + 1)
+        }
+        
         return []
       }
     }
@@ -635,35 +743,54 @@ export default {
           // Wait a bit for backend to process and generate AI response
           console.log('Waiting for AI response...')
           
-          // Poll for new messages every 2 seconds, max 10 times (20 seconds total)
+          // Poll for new messages every 2 seconds, max 30 times (60 seconds total - phù hợp với timeout 1 phút)
           let attempts = 0
-          const maxAttempts = 10
+          const maxAttempts = 30
+          let pollingActive = true
           
           const pollForResponse = async () => {
+            if (!pollingActive) {
+              console.log('Polling stopped due to error or timeout')
+              loading.value = false
+              return
+            }
+            
             attempts++
             console.log(`Polling attempt ${attempts}/${maxAttempts}`)
             
-            const latestMessages = await getLatestMessages(currentSessionId.value)
-            
-            // Check if we have more messages than before (including AI response)
-            if (latestMessages.length > messages.value.length) {
-              console.log('AI response received!')
-              messages.value = latestMessages
+            try {
+              const latestMessages = await getLatestMessages(currentSessionId.value)
+              
+              // Check if we have more messages than before (including AI response)
+              if (latestMessages.length > messages.value.length) {
+                console.log('AI response received!')
+                messages.value = latestMessages
+                pollingActive = false
+                loading.value = false
+                scrollToBottom()
+                updateChatHistory()
+                return
+              }
+              
+              // If max attempts reached, stop polling
+              if (attempts >= maxAttempts) {
+                console.log('Max polling attempts reached (timeout), stopping...')
+                pollingActive = false
+                loading.value = false
+                alert('AI mất quá nhiều thời gian để phản hồi. Vui lòng thử lại.')
+                return
+              }
+              
+              // Continue polling after 2 seconds if still active
+              if (pollingActive) {
+                setTimeout(pollForResponse, 2000)
+              }
+            } catch (error) {
+              console.error('Error during polling:', error)
+              pollingActive = false
               loading.value = false
-              scrollToBottom()
-              updateChatHistory()
-              return
+              alert('Có lỗi xảy ra khi chờ phản hồi từ AI. Vui lòng thử lại.')
             }
-            
-            // If max attempts reached, stop polling
-            if (attempts >= maxAttempts) {
-              console.log('Max polling attempts reached, stopping...')
-              loading.value = false
-              return
-            }
-            
-            // Continue polling after 2 seconds
-            setTimeout(pollForResponse, 2000)
           }
           
           // Start polling after 1 second
@@ -904,11 +1031,113 @@ export default {
       }
     }
     
+    // Render markdown to HTML with code block styling
+    const renderMarkdown = (text) => {
+      try {
+        let html = marked(text)
+        
+        // Replace code blocks with styled containers
+        html = html.replace(/<pre><code([^>]*)>([\s\S]*?)<\/code><\/pre>/g, (match, attributes, code) => {
+          const codeId = 'code-' + Math.random().toString(36).substr(2, 9)
+          const decodedCode = code
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+          
+          // Detect language
+          let highlightedCode = code
+          let language = 'Code'
+          
+          // Check attributes for language class
+          if (attributes && attributes.includes('class=')) {
+            const languageMatch = attributes.match(/class="[^"]*language-(\w+)[^"]*"/)
+            if (languageMatch) {
+              language = languageMatch[1].toLowerCase()
+              if (language === 'js') language = 'JavaScript'
+              if (language === 'bash' || language === 'sh') language = 'bash'
+              if (language === 'json') language = 'JSON'
+            }
+          }
+          
+          // Try to detect JSON
+          if (language === 'Code') {
+            try {
+              const parsedJSON = JSON.parse(decodedCode.trim())
+              language = 'JSON'
+              // Format JSON with proper indentation
+              const formattedJSON = JSON.stringify(parsedJSON, null, 2)
+              console.log('Original JSON:', decodedCode.trim())
+              console.log('Formatted JSON:', formattedJSON)
+              // Apply syntax highlighting to the formatted JSON
+              highlightedCode = highlightJSON(formattedJSON
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;'))
+              console.log('Highlighted JSON:', highlightedCode)
+            } catch (e) {
+              if (decodedCode.includes('Elasticsearch') || decodedCode.includes('"query"')) {
+                language = 'Elasticsearch Query'
+                try {
+                  // Try to format as JSON first
+                  const parsedJSON = JSON.parse(decodedCode.trim())
+                  const formattedJSON = JSON.stringify(parsedJSON, null, 2)
+                  highlightedCode = highlightJSON(formattedJSON
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;'))
+                } catch (formatError) {
+                  highlightedCode = highlightJSON(code)
+                }
+              } else if (decodedCode.includes('git ') || decodedCode.includes('npm ')) {
+                language = 'bash'
+              }
+            }
+          }
+          
+          return `<div class="code-block-container">
+            <div class="code-block-header">
+              <span class="code-block-language">${language}</span>
+              <button class="copy-button" onclick="copyCodeBlock('${codeId}')" title="Copy to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012 2v1"></path>
+                </svg>
+                Copy
+              </button>
+            </div>
+            <pre><code${attributes} id="${codeId}">${highlightedCode}</code></pre>
+          </div>`
+        })
+        
+        return html
+      } catch (error) {
+        console.error('Error rendering markdown:', error)
+        return text
+      }
+    }
+    
+    // Simple JSON syntax highlighter - preserves line breaks and spacing
+    const highlightJSON = (code) => {
+      return code
+        .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span style="color: #9cdcfe;">$1</span>:') // Keys - blue
+        .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span style="color: #ce9178;">$1</span>') // String values - orange
+        .replace(/:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g, ': <span style="color: #b5cea8;">$1</span>') // Numbers - green
+        .replace(/:\s*(true|false|null)/g, ': <span style="color: #569cd6;">$1</span>') // Booleans/null - blue
+        .replace(/([{}[\],])/g, '<span style="color: #d4d4d4;">$1</span>') // Brackets and commas - white
+    }
+    
     return {
       input,
       messages,
       loading,
       loadingMessages,
+      retrying,
       isDark,
       sidebarCollapsed,
       messagesContainer,
@@ -931,7 +1160,8 @@ export default {
       formatDate,
       formatMessageTime,
       copyMessage,
-      handleLogout
+      handleLogout,
+      renderMarkdown
     }
   }
 }
@@ -989,5 +1219,188 @@ export default {
 
 .scrollbar-light {
   scrollbar-color: #d1d5db #f3f4f6; /* thumb track for light */
+}
+
+/* Markdown content styling */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font-weight: 600;
+  margin: 1em 0 0.5em 0;
+}
+
+.markdown-content p {
+  margin: 0.75em 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.75em 0;
+  padding-left: 1.5em;
+}
+
+.markdown-content li {
+  margin: 0.25em 0;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin: 1em 0;
+  font-style: italic;
+  color: #6b7280;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+}
+
+.markdown-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.markdown-content a:hover {
+  color: #2563eb;
+}
+
+/* Code block container styling */
+.code-block-container {
+  position: relative !important;
+  margin: 1em 0 !important;
+  border-radius: 0.75rem !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.code-block-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  padding: 0.75rem 1rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: white !important;
+}
+
+.code-block-language {
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.copy-button {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  padding: 0.375rem 0.75rem !important;
+  border-radius: 0.375rem !important;
+  cursor: pointer !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.copy-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.code-block-container pre {
+  margin: 0 !important;
+  padding: 1rem !important;
+  background: #f8f9fa !important;
+  overflow-x: auto !important;
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+.code-block-container pre code {
+  background: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  color: #212529 !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+/* Dark theme support for code blocks */
+.dark .code-block-container {
+  border-color: #374151 !important;
+}
+
+.dark .code-block-container pre {
+  background: #1f2937 !important;
+}
+
+.dark .code-block-container pre code {
+  color: #e5e7eb !important;
+}
+
+.dark .markdown-content code {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .markdown-content blockquote {
+  border-left-color: #374151;
+  color: #9ca3af;
+}
+
+.dark .markdown-content th,
+.dark .markdown-content td {
+  border-color: #374151;
+}
+
+.dark .markdown-content th {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 </style>
