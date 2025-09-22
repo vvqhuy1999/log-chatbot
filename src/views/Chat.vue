@@ -11,12 +11,12 @@
       <div class="p-4 border-b border-gray-700">
         <div v-if="!sidebarCollapsed" class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-white">Chat Log</h2>
-          <button @click="toggleTheme" 
-                  class="p-2 rounded-lg hover:bg-gray-700 transition-colors"
-                  :title="isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'">
+            <button @click="toggleTheme" 
+                    class="p-2 rounded-lg hover:bg-gray-700 transition-colors"
+                    :title="isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'">
             <span class="text-lg">{{ isDark ? '☀️' : '🌙' }}</span>
-          </button>
-        </div>
+                  </button>
+                </div>
         
         <div class="flex items-center justify-between">
           <div v-if="!sidebarCollapsed" class="flex items-center gap-3 flex-1">
@@ -25,8 +25,8 @@
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-white truncate">{{ user.name }}</p>
                 <p class="text-xs text-gray-400 truncate">@{{ user.username }}</p>
-              </div>
-            </div>
+          </div>
+        </div>
           </div>
           
           <div v-else class="flex justify-center w-full">
@@ -113,8 +113,8 @@
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                 </svg>
-              </div>
-            </div>
+          </div>
+        </div>
           </div>
         </div>
         
@@ -145,7 +145,7 @@
       </div>
     </div>
 
-     <!-- Main Chat Area -->
+    <!-- Main Chat Area -->
      <div class="flex-1 flex flex-col" :class="[isDark ? 'bg-gray-800' : 'bg-white']">
       
       <!-- Chat Header -->
@@ -191,43 +191,86 @@
 
           <!-- Messages -->
           <div v-else class="space-y-4 p-4">
-            <div v-for="(message, index) in messages" :key="index">
-              <!-- User Messages (Right Side) -->
-              <div v-if="message.role === 'user'" 
-                   class="flex justify-end mb-4">
+            <div v-for="(block, index) in messageBlocks" :key="index">
+              <!-- User block -->
+              <div v-if="block.type === 'user'" class="flex justify-end mb-4">
                 <div class="w-3/4">
                   <div class="bg-green-500 text-white rounded-lg px-4 py-2 shadow-sm">
-                    <p class="text-base font-medium whitespace-pre-wrap">{{ message.content }}</p>
+                    <p class="text-base font-medium whitespace-pre-wrap">{{ block.message.content }}</p>
                   </div>
                   <div class="text-xs text-gray-500 mt-1 text-right">
-                    {{ formatMessageTime(message.timestamp) }}
+                    {{ formatMessageTime(block.message.timestamp) }}
                   </div>
                 </div>
               </div>
 
-              <!-- AI Messages (Left Side) -->
-              <div v-else 
-                   class="flex justify-start mb-4">
+              <!-- Single AI block -->
+              <div v-else-if="block.type === 'assistant-single'" class="flex justify-start mb-4">
                 <div class="flex gap-3 w-full">
-                  <!-- AI Avatar -->
                   <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                     </svg>
                   </div>
-                  
-                  <!-- AI Message Content -->
                   <div class="flex-1">
-                    <div class="rounded-lg px-4 py-3 shadow-sm border"
-                         :class="isDark 
-                           ? 'bg-gray-700 border-gray-600' 
-                           : 'bg-white border-gray-200'">
-                      <div class="text-sm leading-relaxed markdown-content" 
-                           :class="isDark ? 'text-gray-100' : 'text-gray-900'"
-                           v-html="renderMarkdown(message.content)"></div>
+                    <div class="relative rounded-lg px-4 py-3 shadow-sm border" :class="isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'">
+                      <button @click="copyQuery(block.message.content)" class="absolute top-2 right-2 text-xs px-2 py-1 rounded border hover:bg-gray-100 dark:hover:bg-gray-600" :class="isDark ? 'border-gray-500 text-gray-200' : 'border-gray-300 text-gray-600'" title="Copy query">
+                        <span class="inline-flex items-center gap-1">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-2M8 16v2a2 2 0 002 2h2"/></svg>
+                          Copy
+                        </span>
+                      </button>
+                      <div class="text-sm leading-relaxed" :class="isDark ? 'text-gray-100' : 'text-gray-900'" v-html="renderMarkdown(block.message.content)"></div>
                     </div>
-                    <div class="text-xs text-gray-500 mt-1">
-                      {{ formatMessageTime(message.timestamp) }}
+                    <div class="text-xs text-gray-500 mt-1">{{ formatMessageTime(block.message.timestamp) }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dual AI comparison block -->
+              <div v-else-if="block.type === 'assistant-dual'" class="flex justify-start mb-4">
+                <div class="flex gap-3 w-full">
+                  <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                  <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Left AI -->
+                    <div class="relative rounded-lg px-4 py-3 shadow-sm border" :class="isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'">
+                      <div class="flex items-center gap-2 mb-2">
+                        <div class="flex items-center gap-2">
+                        <span class="text-xs px-2 py-1 rounded-full" :class="getAiBadge(block.left.content).color === 'blue' ? 'bg-blue-100 text-blue-800' : (getAiBadge(block.left.content).color === 'green' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800')">
+                          {{ getAiBadge(block.left.content).label }}
+                        </span>
+                        <span class="text-xs text-gray-500">{{ formatMessageTime(block.left.timestamp) }}</span>
+                        </div>
+                        <button @click="copyQuery(block.left.content)" class="absolute top-2 right-2 text-xs px-2 py-1 rounded border hover:bg-gray-100 dark:hover:bg-gray-600" :class="isDark ? 'border-gray-500 text-gray-200' : 'border-gray-300 text-gray-600'" title="Copy query">
+                          <span class="inline-flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-2M8 16v2a2 2 0 002 2h2"/></svg>
+                            Copy
+                          </span>
+                        </button>
+                      </div>
+                      <div class="text-sm leading-relaxed" :class="isDark ? 'text-gray-100' : 'text-gray-900'" v-html="renderMarkdown(block.left.content)"></div>
+                    </div>
+                    <!-- Right AI -->
+                    <div class="relative rounded-lg px-4 py-3 shadow-sm border" :class="isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'">
+                      <div class="flex items-center gap-2 mb-2">
+                        <div class="flex items-center gap-2">
+                        <span class="text-xs px-2 py-1 rounded-full" :class="getAiBadge(block.right.content).color === 'blue' ? 'bg-blue-100 text-blue-800' : (getAiBadge(block.right.content).color === 'green' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800')">
+                          {{ getAiBadge(block.right.content).label }}
+                        </span>
+                        <span class="text-xs text-gray-500">{{ formatMessageTime(block.right.timestamp) }}</span>
+                        </div>
+                        <button @click="copyQuery(block.right.content)" class="absolute top-2 right-2 text-xs px-2 py-1 rounded border hover:bg-gray-100 dark:hover:bg-gray-600" :class="isDark ? 'border-gray-500 text-gray-200' : 'border-gray-300 text-gray-600'" title="Copy query">
+                          <span class="inline-flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-2M8 16v2a2 2 0 002 2h2"/></svg>
+                            Copy
+                          </span>
+                        </button>
+                      </div>
+                      <div class="text-sm leading-relaxed" :class="isDark ? 'text-gray-100' : 'text-gray-900'" v-html="renderMarkdown(block.right.content)"></div>
                     </div>
                   </div>
                 </div>
@@ -252,23 +295,104 @@
             </div>
           </div>
 
-          <!-- Typing Indicator -->
-          <div v-if="loading" 
-               class="group border-b transition-colors"
-               :class="isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
-            <div class="max-w-4xl mx-auto px-6 py-8 flex gap-6">
-              <div class="flex-shrink-0">
-                <div class="w-8 h-8 bg-green-500 rounded-sm flex items-center justify-center text-white text-sm font-medium">
-                  AI
+          <!-- Comparison Results -->
+          <div v-if="comparisonData && comparisonData.response_generation_comparison" class="p-4">
+            <div class="max-w-4xl mx-auto">
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold mb-2" :class="isDark ? 'text-white' : 'text-gray-900'">
+                  🆚 Kết quả so sánh AI Models
+                </h3>
+                <p class="text-sm" :class="isDark ? 'text-gray-400' : 'text-gray-600'">
+                  Câu hỏi: {{ comparisonData.user_question }}
+                </p>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- OpenAI Result -->
+                <div class="border rounded-lg p-4" :class="isDark ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'">
+                  <div class="flex items-center gap-2 mb-3">
+                    <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span class="text-white text-xs font-bold">O</span>
+                    </div>
+                    <h4 class="font-semibold" :class="isDark ? 'text-white' : 'text-gray-900'">
+                      OpenAI GPT-4o-mini
+                    </h4>
+                    <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                      {{ comparisonData.response_generation_comparison.openai.response_time_ms }}ms
+                    </span>
+                  </div>
+                  <div class="text-sm leading-relaxed whitespace-pre-wrap" 
+                       :class="isDark ? 'text-gray-100' : 'text-gray-700'">
+                    {{ comparisonData.response_generation_comparison.openai.response }}
+                  </div>
+                </div>
+
+                <!-- OpenRouter Result -->
+                <div class="border rounded-lg p-4" :class="isDark ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'">
+                  <div class="flex items-center gap-2 mb-3">
+                    <div class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <span class="text-white text-xs font-bold">G</span>
+                    </div>
+                    <h4 class="font-semibold" :class="isDark ? 'text-white' : 'text-gray-900'">
+                      OpenRouter Grok-4
+                    </h4>
+                    <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                      {{ comparisonData.response_generation_comparison.openrouter.response_time_ms }}ms
+                    </span>
+                  </div>
+                  <div class="text-sm leading-relaxed whitespace-pre-wrap" 
+                       :class="isDark ? 'text-gray-100' : 'text-gray-700'">
+                    {{ comparisonData.response_generation_comparison.openrouter.response }}
+                  </div>
+                </div>
+                  </div>
+                  
+              <!-- Performance Comparison -->
+              <div class="mt-4 p-3 rounded-lg" :class="isDark ? 'bg-gray-800 border border-gray-600' : 'bg-blue-50 border border-blue-200'">
+                <h5 class="font-medium mb-2" :class="isDark ? 'text-white' : 'text-blue-900'">
+                  📊 So sánh hiệu suất
+                </h5>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span class="font-medium" :class="isDark ? 'text-gray-300' : 'text-gray-600'">Query Generation:</span>
+                    <div class="mt-1">
+                      <span class="text-blue-600">OpenAI:</span> {{ comparisonData.query_generation_comparison.openai.response_time_ms }}ms
+                    </div>
+                    <div>
+                      <span class="text-green-600">OpenRouter:</span> {{ comparisonData.query_generation_comparison.openrouter.response_time_ms }}ms
+                    </div>
+                  </div>
+                  <div>
+                    <span class="font-medium" :class="isDark ? 'text-gray-300' : 'text-gray-600'">Response Generation:</span>
+                    <div class="mt-1">
+                      <span class="text-blue-600">OpenAI:</span> {{ comparisonData.response_generation_comparison.openai.response_time_ms }}ms
+                    </div>
+                    <div>
+                      <span class="text-green-600">OpenRouter:</span> {{ comparisonData.response_generation_comparison.openrouter.response_time_ms }}ms
+                    </div>
+                  </div>
+                  </div>
                 </div>
               </div>
-              <div class="flex-1">
-                <div class="flex items-center space-x-2">
-                  <div class="flex space-x-1">
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div v-if="loading" 
+                 class="group border-b transition-colors"
+                 :class="isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
+              <div class="max-w-4xl mx-auto px-6 py-8 flex gap-6">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-green-500 rounded-sm flex items-center justify-center text-white text-sm font-medium">
+                    AI
                   </div>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center space-x-2">
+                    <div class="flex space-x-1">
+                      <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                      <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    </div>
                   <span class="text-sm text-gray-500">
                     {{ retrying ? 'Đang thử lại kết nối...' : 'AI đang soạn phản hồi...' }}
                   </span>
@@ -346,12 +470,15 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
-import { marked } from 'marked'
 
 // Create API instance
+// Use relative URL in development (will use Vite proxy), absolute URL in production
+const apiBaseUrl = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080')
+console.log('🔗 API Base URL:', apiBaseUrl, '(DEV mode:', import.meta.env.DEV, ')')
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
-  timeout: 600000, // Tăng timeout lên 10 phút
+  baseURL: apiBaseUrl,
+  timeout: 600000, // 10 phút
   headers: {
     'Content-Type': 'application/json'
   }
@@ -386,6 +513,11 @@ export default {
     const currentChatIndex = ref(null)
     const currentSessionId = ref(null)
     const retrying = ref(false)
+    const comparisonData = ref(null)
+    
+    // Polling configuration: 10 minutes total, 2s interval
+    const POLL_INTERVAL_MS = 2000
+    const MAX_POLL_DURATION_MS = 10 * 60 * 1000
     
     const user = computed(() => authState.user)
     
@@ -404,7 +536,13 @@ export default {
             createdAt: new Date(session.createdAt),
             lastActiveAt: new Date(session.lastActiveAt),
             messages: [] // Messages will be loaded separately when needed
-          })).sort((a, b) => b.lastActiveAt - a.lastActiveAt) // Sort by lastActiveAt descending (newest first)
+          }))
+          // Sort newest first by lastActiveAt, fallback createdAt
+          chatHistory.value.sort((a, b) => {
+            const ta = (a.lastActiveAt || a.createdAt || new Date(0)).getTime()
+            const tb = (b.lastActiveAt || b.createdAt || new Date(0)).getTime()
+            return tb - ta
+          })
         } else {
           chatHistory.value = []
         }
@@ -447,166 +585,102 @@ export default {
         if (messageInput.value) {
           adjustTextareaHeight()
         }
+        // Enhance code blocks after mount
+        setTimeout(() => enhanceRenderedMarkdown(), 0)
       })
-      
-      // Setup global copy function for code blocks with fallback
-      window.copyCodeBlock = async (codeId) => {
-        try {
-          const codeElement = document.getElementById(codeId)
-          if (!codeElement) return
-          
-          const text = codeElement.textContent
-          let copySuccess = false
-          
-          // Method 1: Modern Clipboard API (requires HTTPS or localhost)
-          if (navigator.clipboard && window.isSecureContext) {
-            try {
-              await navigator.clipboard.writeText(text)
-              copySuccess = true
-            } catch (e) {
-              console.log('Clipboard API failed, trying fallback:', e)
-            }
-          }
-          
-          // Method 2: Fallback for HTTP or older browsers
-          if (!copySuccess) {
-            try {
-              // Create temporary textarea
-              const textArea = document.createElement('textarea')
-              textArea.value = text
-              textArea.style.position = 'fixed'
-              textArea.style.left = '-999999px'
-              textArea.style.top = '-999999px'
-              document.body.appendChild(textArea)
-              textArea.focus()
-              textArea.select()
-              
-              // Try execCommand
-              copySuccess = document.execCommand('copy')
-              document.body.removeChild(textArea)
-            } catch (e) {
-              console.error('Fallback copy method failed:', e)
-            }
-          }
-          
-          // Show feedback
-          const copyButton = codeElement.closest('.code-block-container').querySelector('.copy-button')
-          if (copyButton) {
-            const originalText = copyButton.innerHTML
-            if (copySuccess) {
-              copyButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>Copied!'
-            } else {
-              copyButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"></path></svg>Failed!'
-            }
-            setTimeout(() => {
-              copyButton.innerHTML = originalText
-            }, 2000)
-          }
-          
-        } catch (error) {
-          console.error('Failed to copy code:', error)
-          // Show error feedback
-          const copyButton = document.querySelector(`#${codeId}`)?.closest('.code-block-container')?.querySelector('.copy-button')
-          if (copyButton) {
-            const originalText = copyButton.innerHTML
-            copyButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"></path></svg>Error!'
-            setTimeout(() => {
-              copyButton.innerHTML = originalText
-            }, 2000)
-          }
-        }
-      }
     })
     
-    // Start new chat session
-    const startNewSession = async (content) => {
+    // Removed legacy startNewSession that called /api/chat-sessions/start/compare (not available)
+
+    // Start comparison by sending the first message directly
+    const startComparisonDirect = async (content) => {
       try {
-        console.log('Creating new session with content:', content)
-        const response = await api.post('/api/chat-sessions/start', {
-          content: content
-        })
-        
-        if (response.data && response.data.sessionId) {
-          currentSessionId.value = response.data.sessionId
-          console.log('New session created:', response.data)
-          
-          // Wait a bit for backend to process and generate initial AI response
-          console.log('Waiting for initial AI response...')
-          
-          // Poll for messages in the new session
+        console.log('Starting comparison via /api/chat-messages/start-comparison with content:', content)
+        const response = await api.post('/api/chat-messages/start-comparison', { message: content })
+        console.log('start-comparison response status:', response.status, 'data:', response.data)
+        const newSessionId = response?.data?.sessionId || response?.data?.data?.sessionId || response?.data?.session?.id
+        if (newSessionId) {
+          currentSessionId.value = newSessionId
+          console.log('Comparison started, sessionId:', newSessionId)
+
+          // Poll for messages (same logic as startNewSession)
           let attempts = 0
-          const maxAttempts = 10
-          
+          const maxAttempts = Math.ceil(MAX_POLL_DURATION_MS / POLL_INTERVAL_MS)
+          const pollStartTime = Date.now()
           const pollForInitialResponse = async () => {
             attempts++
             console.log(`Polling for initial response attempt ${attempts}/${maxAttempts}`)
-            
-            const latestMessages = await getLatestMessages(response.data.sessionId)
-            
-            // Check if we have any messages (including AI response)
+            const latestMessages = await getLatestMessages(newSessionId)
             if (latestMessages.length > 0) {
-              console.log('Initial AI response received!')
-              
-              // Update current messages
               messages.value = latestMessages
-              
-              // Reload chat sessions to get updated list and set active session
               await loadChatSessions()
-              
-              // Find and set the active session
-              const sessionIndex = chatHistory.value.findIndex(session => session.sessionId === response.data.sessionId)
-              if (sessionIndex !== -1) {
-                currentChatIndex.value = sessionIndex
-                console.log('Set active session index:', sessionIndex)
-              }
-              
-              // Stop loading
+              const sessionIndex = chatHistory.value.findIndex(s => s.sessionId === newSessionId)
+              if (sessionIndex !== -1) currentChatIndex.value = sessionIndex
               loading.value = false
-              
-              // Reset textarea height after loading is complete
-              nextTick(() => {
-                resetTextareaHeight()
-              })
-              
-              return response.data.sessionId
+              nextTick(() => { resetTextareaHeight() })
+              return newSessionId
             }
-            
-            // If max attempts reached, still set up session
-            if (attempts >= maxAttempts) {
-              console.log('Max polling attempts reached for initial response')
-              
-              // Reload chat sessions
+            if (Date.now() - pollStartTime >= MAX_POLL_DURATION_MS) {
               await loadChatSessions()
-              
-              // Find and set the active session
-              const sessionIndex = chatHistory.value.findIndex(session => session.sessionId === response.data.sessionId)
-              if (sessionIndex !== -1) {
-                currentChatIndex.value = sessionIndex
-                console.log('Set active session index:', sessionIndex)
-              }
-              
-              // Stop loading
+              const sessionIndex = chatHistory.value.findIndex(s => s.sessionId === newSessionId)
+              if (sessionIndex !== -1) currentChatIndex.value = sessionIndex
               loading.value = false
-              
-              // Reset textarea height after loading is complete
-              nextTick(() => {
-                resetTextareaHeight()
-              })
-              
-              return response.data.sessionId
+              nextTick(() => { resetTextareaHeight() })
+              return newSessionId
             }
-            
-            // Continue polling after 2 seconds
-            setTimeout(pollForInitialResponse, 2000)
+            setTimeout(pollForInitialResponse, POLL_INTERVAL_MS)
           }
-          
-          // Start polling after 1 second
           setTimeout(pollForInitialResponse, 1000)
-          
-          return response.data.sessionId
+          return newSessionId
+        }
+
+        // If backend doesn't return sessionId, infer by reloading sessions and taking the most recent
+        console.log('No sessionId in start-comparison response; inferring from sessions list...')
+        await loadChatSessions()
+        if (chatHistory.value.length > 0) {
+          // Pick the session with latest lastActiveAt/createdAt
+          const idx = chatHistory.value.reduce((bestIdx, sess, i, arr) => {
+            const best = arr[bestIdx]
+            const bestTime = (best.lastActiveAt || best.createdAt || new Date(0)).getTime()
+            const curTime = (sess.lastActiveAt || sess.createdAt || new Date(0)).getTime()
+            return curTime > bestTime ? i : bestIdx
+          }, 0)
+          const inferred = chatHistory.value[idx]
+          if (inferred && inferred.sessionId) {
+            currentSessionId.value = inferred.sessionId
+            currentChatIndex.value = idx
+            console.log('Inferred sessionId:', inferred.sessionId, 'at index', idx)
+            // Start polling messages for inferred session
+            let attempts = 0
+            const maxAttempts = Math.ceil(MAX_POLL_DURATION_MS / POLL_INTERVAL_MS)
+            const pollStartTime = Date.now()
+            const pollForInitialResponse = async () => {
+              attempts++
+              const latestMessages = await getLatestMessages(inferred.sessionId)
+              if (latestMessages.length > 0) {
+                messages.value = latestMessages
+                loading.value = false
+                nextTick(() => { resetTextareaHeight() })
+                return inferred.sessionId
+              }
+              if (Date.now() - pollStartTime >= MAX_POLL_DURATION_MS) {
+                loading.value = false
+                nextTick(() => { resetTextareaHeight() })
+                return inferred.sessionId
+              }
+              setTimeout(pollForInitialResponse, POLL_INTERVAL_MS)
+            }
+            setTimeout(pollForInitialResponse, 1000)
+            return inferred.sessionId
+          }
         }
       } catch (error) {
-        console.error('Error starting new session:', error)
+        console.error('Error starting comparison via message:', error?.response?.status, error?.response?.data || error?.message)
+        if (error?.response?.status === 404) {
+          alert('Endpoint /api/chat-messages/start-comparison không tồn tại (404). Kiểm tra backend hoặc cấu hình proxy.')
+        } else if (error?.response?.status === 500) {
+          alert('Server lỗi khi start comparison (500). Vui lòng thử lại.')
+        }
         loading.value = false
       }
       return null
@@ -614,22 +688,28 @@ export default {
 
     // Send message to API with retry mechanism
     const sendMessageToAPI = async (sessionId, content, retryCount = 0) => {
-      const maxRetries = 1 // Giảm từ 2 xuống 1 để tránh retry quá nhiều
+      const maxRetries = 2
       
       try {
-        const response = await api.post(`/api/chat-messages/${sessionId}`, {
-          sender: "USER",
-          content: content
+        const response = await api.post(`/api/chat-messages/compare/${sessionId}`, {
+          message: content
         })
         
-        console.log('Message sent to API:', response.data)
+        console.log('Comparison message sent to API:', response.data)
+        
+        // Store comparison data for display
+        if (response.data && response.data.mode === 'comparison') {
+          comparisonData.value = response.data
+          console.log('Comparison data stored:', response.data)
+        }
+        
         retrying.value = false
         return response.data
       } catch (error) {
         console.error(`Error sending message to API (attempt ${retryCount + 1}):`, error)
         
-        // Retry chỉ với network errors, không retry với timeout
-        if (retryCount < maxRetries && error.code === 'NETWORK_ERROR' && error.code !== 'ECONNABORTED') {
+        // Retry on timeout or network errors
+        if (retryCount < maxRetries && (error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR')) {
           retrying.value = true
           console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`)
           await new Promise(resolve => setTimeout(resolve, 2000))
@@ -640,13 +720,13 @@ export default {
         
         // Show user-friendly error message
         if (error.code === 'ECONNABORTED') {
-          alert('Kết nối bị timeout. Server có thể đang xử lý, vui lòng đợi hoặc thử lại sau.')
+          alert('Kết nối bị timeout. Vui lòng kiểm tra kết nối mạng và thử lại.')
         } else if (error.response?.status === 500) {
           alert('Lỗi server. Vui lòng thử lại sau.')
         } else if (error.response?.status === 404) {
           alert('Session không tồn tại. Vui lòng tạo cuộc trò chuyện mới.')
         } else {
-          alert('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại.')
+          alert('Có lỗi xảy ra khi gửi tin nhắn comparison. Vui lòng thử lại.')
         }
         
         return null
@@ -655,7 +735,7 @@ export default {
 
     // Get latest messages from API with retry mechanism
     const getLatestMessages = async (sessionId, retryCount = 0) => {
-      const maxRetries = 1 // Giảm từ 2 xuống 1
+      const maxRetries = 2
       
       try {
         const response = await api.get(`/api/chat-sessions/${sessionId}/messages`)
@@ -676,8 +756,8 @@ export default {
       } catch (error) {
         console.error(`Error getting latest messages (attempt ${retryCount + 1}):`, error)
         
-        // Retry chỉ với network errors, không retry với timeout
-        if (retryCount < maxRetries && error.code === 'NETWORK_ERROR' && error.code !== 'ECONNABORTED') {
+        // Retry on timeout or network errors
+        if (retryCount < maxRetries && (error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR')) {
           console.log(`Retrying get messages in 1 second... (${retryCount + 1}/${maxRetries})`)
           await new Promise(resolve => setTimeout(resolve, 1000))
           return getLatestMessages(sessionId, retryCount + 1)
@@ -686,7 +766,7 @@ export default {
         return []
       }
     }
-
+    
     // Methods tương tự như component cũ
     const sendMessage = async () => {
       if (!input.value.trim() || loading.value) return
@@ -701,9 +781,10 @@ export default {
         input.value = ''
         loading.value = true
         
-        const sessionId = await startNewSession(userInput)
+        // Use direct comparison start endpoint only
+        const sessionId = await startComparisonDirect(userInput)
         if (!sessionId) {
-          console.error('Failed to create new session')
+          console.error('Failed to create new comparison session')
           loading.value = false
           return
         }
@@ -729,12 +810,13 @@ export default {
         setTimeout(() => {
           resetTextareaHeight()
         }, 100)
+        setTimeout(() => enhanceRenderedMarkdown(), 0)
       })
       scrollToBottom()
 
       // Send message to API if we have a session ID
       if (currentSessionId.value) {
-        console.log(`Sending message to session ${currentSessionId.value}:`, userInput)
+        console.log(`Sending comparison message to session ${currentSessionId.value}:`, userInput)
         
         // Send user message to API
         const apiResponse = await sendMessageToAPI(currentSessionId.value, userInput)
@@ -743,54 +825,43 @@ export default {
           // Wait a bit for backend to process and generate AI response
           console.log('Waiting for AI response...')
           
-          // Poll for new messages every 2 seconds, max 30 times (60 seconds total - phù hợp với timeout 1 phút)
+          // Poll for new messages every 2 seconds, up to 10 minutes total
           let attempts = 0
-          const maxAttempts = 30
-          let pollingActive = true
+          const maxAttempts = Math.ceil(MAX_POLL_DURATION_MS / POLL_INTERVAL_MS)
+          const pollStartTime = Date.now()
           
           const pollForResponse = async () => {
-            if (!pollingActive) {
-              console.log('Polling stopped due to error or timeout')
+            attempts++
+            console.log(`Polling attempt ${attempts}/${maxAttempts}`)
+            
+            const latestMessages = await getLatestMessages(currentSessionId.value)
+            
+            // Check if we have more messages than before (including AI response)
+            if (latestMessages.length > messages.value.length) {
+              console.log('AI response received!')
+              messages.value = latestMessages
+              
+              // Try to get comparison data from the latest message if available
+              const latestMessage = latestMessages[latestMessages.length - 1]
+              if (latestMessage.comparisonData) {
+                comparisonData.value = latestMessage.comparisonData
+              }
+        
+        loading.value = false
+        scrollToBottom()
+        updateChatHistory()
+              return
+            }
+            
+            // If max polling duration reached, stop polling
+            if (Date.now() - pollStartTime >= MAX_POLL_DURATION_MS) {
+              console.log('Max polling duration reached (timeout), stopping...')
               loading.value = false
               return
             }
             
-            attempts++
-            console.log(`Polling attempt ${attempts}/${maxAttempts}`)
-            
-            try {
-              const latestMessages = await getLatestMessages(currentSessionId.value)
-              
-              // Check if we have more messages than before (including AI response)
-              if (latestMessages.length > messages.value.length) {
-                console.log('AI response received!')
-                messages.value = latestMessages
-                pollingActive = false
-                loading.value = false
-                scrollToBottom()
-                updateChatHistory()
-                return
-              }
-              
-              // If max attempts reached, stop polling
-              if (attempts >= maxAttempts) {
-                console.log('Max polling attempts reached (timeout), stopping...')
-                pollingActive = false
-                loading.value = false
-                alert('AI mất quá nhiều thời gian để phản hồi. Vui lòng thử lại.')
-                return
-              }
-              
-              // Continue polling after 2 seconds if still active
-              if (pollingActive) {
-                setTimeout(pollForResponse, 2000)
-              }
-            } catch (error) {
-              console.error('Error during polling:', error)
-              pollingActive = false
-              loading.value = false
-              alert('Có lỗi xảy ra khi chờ phản hồi từ AI. Vui lòng thử lại.')
-            }
+            // Continue polling after interval
+            setTimeout(pollForResponse, POLL_INTERVAL_MS)
           }
           
           // Start polling after 1 second
@@ -884,6 +955,7 @@ export default {
       messages.value = []
       currentChatIndex.value = null
       currentSessionId.value = null
+      comparisonData.value = null
       input.value = ''
       // Reload chat sessions to get any new ones
       console.log('🔄 Reloading chat sessions after new chat...')
@@ -896,6 +968,9 @@ export default {
       
       // Set current session ID when loading an existing chat
       currentSessionId.value = chat.sessionId
+      
+      // Clear comparison data when loading different chat
+      comparisonData.value = null
       
       // Show loading state for messages
       loadingMessages.value = true
@@ -933,7 +1008,8 @@ export default {
         
         // Scroll to bottom after loading
         nextTick(() => {
-          scrollToBottom()
+      scrollToBottom()
+      setTimeout(() => enhanceRenderedMarkdown(), 0)
         })
       }
     }
@@ -949,8 +1025,133 @@ export default {
         }
         
         chatHistory.value[currentChatIndex.value] = updatedChat
+        // Move the updated session to the top and keep list sorted by recency
+        const moved = chatHistory.value.splice(currentChatIndex.value, 1)[0]
+        chatHistory.value.unshift(moved)
+        currentChatIndex.value = 0
+        chatHistory.value.sort((a, b) => {
+          const ta = (a.lastActiveAt || a.createdAt || new Date(0)).getTime()
+          const tb = (b.lastActiveAt || b.createdAt || new Date(0)).getTime()
+          return tb - ta
+        })
         console.log('Updated chat history for session:', updatedChat.sessionId)
       }
+    }
+
+    // Group consecutive AI responses after a user message into a dual block
+    const messageBlocks = computed(() => {
+      const blocks = []
+      const list = messages.value || []
+      let i = 0
+      while (i < list.length) {
+        const msg = list[i]
+        if (msg.role === 'user') {
+          blocks.push({ type: 'user', message: msg })
+          // Peek next one or two for assistant replies
+          const next = list[i + 1]
+          const next2 = list[i + 2]
+          if (next && next.role === 'assistant' && next2 && next2.role === 'assistant') {
+            blocks.push({ type: 'assistant-dual', left: next, right: next2 })
+            i += 3
+            continue
+          } else if (next && next.role === 'assistant') {
+            blocks.push({ type: 'assistant-single', message: next })
+            i += 2
+            continue
+          }
+          i += 1
+          continue
+        }
+        // If assistant without preceding user (fallback), render as single
+        if (msg.role === 'assistant') {
+          // If next is also assistant and previous wasn't a user, keep them separate
+          blocks.push({ type: 'assistant-single', message: msg })
+          i += 1
+          continue
+        }
+        // Any other roles just push as-is
+        blocks.push({ type: 'other', message: msg })
+        i += 1
+      }
+      return blocks
+    })
+
+    // Infer AI source for badge based on content prefix markers
+    const getAiBadge = (content) => {
+      const text = (content || '').toString()
+      if (/OpenAI Response/i.test(text) || /\bOpenAI\b/i.test(text)) {
+        return { label: 'OpenAI', color: 'blue' }
+      }
+      if (/OpenRouter Response/i.test(text) || /\bOpenRouter\b|\bGrok\b/i.test(text)) {
+        return { label: 'OpenRouter', color: 'green' }
+      }
+      return { label: 'AI', color: 'purple' }
+    }
+
+    // Basic markdown renderer for bold, italics, inline/code blocks, lists and fenced code
+    const renderMarkdown = (raw) => {
+      if (!raw) return ''
+      let html = raw
+      // Escape HTML first
+      html = html
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+      // Fenced code blocks ```lang\n...```
+      html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (_m, lang, inner) => {
+        const language = (lang || '').trim()
+        return '<pre class="code-block rounded-md p-3 overflow-auto bg-gray-900 text-gray-100" data-lang="' + language + '"><code>' + inner + '</code></pre>'
+      })
+      // Bold **text**
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      // Italic *text*
+      html = html.replace(/(^|\s)\*(?!\s)([^*]+?)\*(?=\s|[.,!?:;)]|$)/g, '$1<em>$2</em>')
+      // Inline code `code`
+      html = html.replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800">$1</code>')
+      // Headings (convert to strong)
+      html = html.replace(/^#{1,6}\s*(.+)$/gm, '<strong>$1</strong>')
+      // Unordered lists
+      html = html.replace(/(^|\n)-\s+(.+)(?=\n|$)/g, (m, p1, item) => `${p1}<li>${item}</li>`)
+      html = html.replace(/(<li>[^]+?<\/li>)/g, '<ul class="list-disc ml-5">$1</ul>')
+      // New lines → <br>
+      html = html.replace(/\n/g, '<br>')
+      return html
+    }
+
+    const enhanceRenderedMarkdown = () => {
+      const container = messagesContainer.value
+      if (!container) return
+      const blocks = container.querySelectorAll('pre.code-block')
+      blocks.forEach((pre) => {
+        if (pre.dataset.enhanced === '1') return
+        pre.dataset.enhanced = '1'
+        pre.classList.add('relative', 'pt-8')
+        const lang = (pre.getAttribute('data-lang') || '').toUpperCase()
+        // Language pill
+        const pill = document.createElement('span')
+        pill.textContent = lang || 'CODE'
+        pill.className = 'absolute top-2 left-2 text-2xs px-2 py-0.5 rounded bg-gray-800 text-gray-200 border border-gray-700'
+        // Copy button
+        const btn = document.createElement('button')
+        btn.type = 'button'
+        btn.title = 'Copy code'
+        btn.className = 'absolute top-2 right-2 text-2xs px-2 py-0.5 rounded border border-gray-600 text-gray-200 hover:bg-gray-700'
+        btn.innerText = 'Copy'
+        btn.addEventListener('click', async () => {
+          try {
+            const codeEl = pre.querySelector('code')
+            const text = codeEl ? codeEl.textContent || '' : ''
+            await navigator.clipboard.writeText(text)
+            const old = btn.innerText
+            btn.innerText = 'Copied'
+            setTimeout(() => (btn.innerText = old), 1200)
+          } catch (e) {
+            console.error('Copy failed:', e)
+          }
+        })
+        pre.appendChild(pill)
+        pre.appendChild(btn)
+      })
     }
     
     const formatDate = (date) => {
@@ -987,6 +1188,22 @@ export default {
         console.error('Failed to copy:', error)
       }
     }
+
+    const extractFirstCodeBlock = (raw) => {
+      if (!raw) return ''
+      const match = raw.match(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/) || raw.match(/`([^`]+)`/)
+      if (!match) return ''
+      return (match[1] || '').trim()
+    }
+
+    const copyQuery = async (raw) => {
+      const code = extractFirstCodeBlock(raw) || raw || ''
+      try {
+        await navigator.clipboard.writeText(code)
+      } catch (error) {
+        console.error('Failed to copy query:', error)
+      }
+    }
     
     // Delete chat session
     const deleteSession = async (sessionId, index) => {
@@ -1006,6 +1223,7 @@ export default {
           messages.value = []
           currentChatIndex.value = null
           currentSessionId.value = null
+          comparisonData.value = null
         } else if (currentChatIndex.value > index) {
           // Adjust current index if deleted session was before current
           currentChatIndex.value--
@@ -1017,7 +1235,7 @@ export default {
         alert('Có lỗi xảy ra khi xóa cuộc trò chuyện. Vui lòng thử lại.')
       }
     }
-
+    
     const handleLogout = async () => {
       console.log('Logout button clicked')
       try {
@@ -1031,117 +1249,20 @@ export default {
       }
     }
     
-    // Render markdown to HTML with code block styling
-    const renderMarkdown = (text) => {
-      try {
-        let html = marked(text)
-        
-        // Replace code blocks with styled containers
-        html = html.replace(/<pre><code([^>]*)>([\s\S]*?)<\/code><\/pre>/g, (match, attributes, code) => {
-          const codeId = 'code-' + Math.random().toString(36).substr(2, 9)
-          const decodedCode = code
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&amp;/g, '&')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-          
-          // Detect language
-          let highlightedCode = code
-          let language = 'Code'
-          
-          // Check attributes for language class
-          if (attributes && attributes.includes('class=')) {
-            const languageMatch = attributes.match(/class="[^"]*language-(\w+)[^"]*"/)
-            if (languageMatch) {
-              language = languageMatch[1].toLowerCase()
-              if (language === 'js') language = 'JavaScript'
-              if (language === 'bash' || language === 'sh') language = 'bash'
-              if (language === 'json') language = 'JSON'
-            }
-          }
-          
-          // Try to detect JSON
-          if (language === 'Code') {
-            try {
-              const parsedJSON = JSON.parse(decodedCode.trim())
-              language = 'JSON'
-              // Format JSON with proper indentation
-              const formattedJSON = JSON.stringify(parsedJSON, null, 2)
-              console.log('Original JSON:', decodedCode.trim())
-              console.log('Formatted JSON:', formattedJSON)
-              // Apply syntax highlighting to the formatted JSON
-              highlightedCode = highlightJSON(formattedJSON
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;'))
-              console.log('Highlighted JSON:', highlightedCode)
-            } catch (e) {
-              if (decodedCode.includes('Elasticsearch') || decodedCode.includes('"query"')) {
-                language = 'Elasticsearch Query'
-                try {
-                  // Try to format as JSON first
-                  const parsedJSON = JSON.parse(decodedCode.trim())
-                  const formattedJSON = JSON.stringify(parsedJSON, null, 2)
-                  highlightedCode = highlightJSON(formattedJSON
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#39;'))
-                } catch (formatError) {
-                  highlightedCode = highlightJSON(code)
-                }
-              } else if (decodedCode.includes('git ') || decodedCode.includes('npm ')) {
-                language = 'bash'
-              }
-            }
-          }
-          
-          return `<div class="code-block-container">
-            <div class="code-block-header">
-              <span class="code-block-language">${language}</span>
-              <button class="copy-button" onclick="copyCodeBlock('${codeId}')" title="Copy to clipboard">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012 2v1"></path>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <pre><code${attributes} id="${codeId}">${highlightedCode}</code></pre>
-          </div>`
-        })
-        
-        return html
-      } catch (error) {
-        console.error('Error rendering markdown:', error)
-        return text
-      }
-    }
-    
-    // Simple JSON syntax highlighter - preserves line breaks and spacing
-    const highlightJSON = (code) => {
-      return code
-        .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span style="color: #9cdcfe;">$1</span>:') // Keys - blue
-        .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span style="color: #ce9178;">$1</span>') // String values - orange
-        .replace(/:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g, ': <span style="color: #b5cea8;">$1</span>') // Numbers - green
-        .replace(/:\s*(true|false|null)/g, ': <span style="color: #569cd6;">$1</span>') // Booleans/null - blue
-        .replace(/([{}[\],])/g, '<span style="color: #d4d4d4;">$1</span>') // Brackets and commas - white
-    }
-    
     return {
       input,
       messages,
       loading,
       loadingMessages,
       retrying,
+      comparisonData,
       isDark,
       sidebarCollapsed,
       messagesContainer,
       messageInput,
+      messageBlocks,
+      getAiBadge,
+      renderMarkdown,
       chatHistory,
       loadingChatHistory,
       currentChatIndex,
@@ -1160,8 +1281,8 @@ export default {
       formatDate,
       formatMessageTime,
       copyMessage,
-      handleLogout,
-      renderMarkdown
+      copyQuery,
+      handleLogout
     }
   }
 }
@@ -1219,188 +1340,5 @@ export default {
 
 .scrollbar-light {
   scrollbar-color: #d1d5db #f3f4f6; /* thumb track for light */
-}
-
-/* Markdown content styling */
-.markdown-content {
-  line-height: 1.6;
-}
-
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3,
-.markdown-content h4,
-.markdown-content h5,
-.markdown-content h6 {
-  font-weight: 600;
-  margin: 1em 0 0.5em 0;
-}
-
-.markdown-content p {
-  margin: 0.75em 0;
-}
-
-.markdown-content ul,
-.markdown-content ol {
-  margin: 0.75em 0;
-  padding-left: 1.5em;
-}
-
-.markdown-content li {
-  margin: 0.25em 0;
-}
-
-.markdown-content strong {
-  font-weight: 600;
-}
-
-.markdown-content em {
-  font-style: italic;
-}
-
-.markdown-content code {
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.9em;
-}
-
-.markdown-content blockquote {
-  border-left: 4px solid #e5e7eb;
-  padding-left: 1em;
-  margin: 1em 0;
-  font-style: italic;
-  color: #6b7280;
-}
-
-.markdown-content table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1em 0;
-}
-
-.markdown-content th,
-.markdown-content td {
-  border: 1px solid #e5e7eb;
-  padding: 0.5em;
-  text-align: left;
-}
-
-.markdown-content th {
-  background-color: rgba(0, 0, 0, 0.05);
-  font-weight: 600;
-}
-
-.markdown-content a {
-  color: #3b82f6;
-  text-decoration: underline;
-}
-
-.markdown-content a:hover {
-  color: #2563eb;
-}
-
-/* Code block container styling */
-.code-block-container {
-  position: relative !important;
-  margin: 1em 0 !important;
-  border-radius: 0.75rem !important;
-  overflow: hidden !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-  border: 1px solid #e5e7eb !important;
-}
-
-.code-block-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  padding: 0.75rem 1rem !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  font-size: 0.75rem !important;
-  font-weight: 600 !important;
-  color: white !important;
-}
-
-.code-block-language {
-  color: rgba(255, 255, 255, 0.9);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
-}
-
-.copy-button {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: white !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  padding: 0.375rem 0.75rem !important;
-  border-radius: 0.375rem !important;
-  cursor: pointer !important;
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.375rem !important;
-  transition: all 0.2s ease !important;
-}
-
-.copy-button:hover {
-  background: rgba(255, 255, 255, 0.3) !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
-}
-
-.code-block-container pre {
-  margin: 0 !important;
-  padding: 1rem !important;
-  background: #f8f9fa !important;
-  overflow-x: auto !important;
-  font-family: 'Courier New', Courier, monospace !important;
-  font-size: 0.875rem !important;
-  line-height: 1.5 !important;
-  white-space: pre-wrap !important;
-  word-wrap: break-word !important;
-}
-
-.code-block-container pre code {
-  background: none !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  font-family: inherit !important;
-  font-size: inherit !important;
-  color: #212529 !important;
-  white-space: pre-wrap !important;
-  word-wrap: break-word !important;
-}
-
-/* Dark theme support for code blocks */
-.dark .code-block-container {
-  border-color: #374151 !important;
-}
-
-.dark .code-block-container pre {
-  background: #1f2937 !important;
-}
-
-.dark .code-block-container pre code {
-  color: #e5e7eb !important;
-}
-
-.dark .markdown-content code {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark .markdown-content blockquote {
-  border-left-color: #374151;
-  color: #9ca3af;
-}
-
-.dark .markdown-content th,
-.dark .markdown-content td {
-  border-color: #374151;
-}
-
-.dark .markdown-content th {
-  background-color: rgba(255, 255, 255, 0.05);
 }
 </style>
