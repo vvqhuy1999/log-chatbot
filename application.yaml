@@ -1,0 +1,40 @@
+server:
+  address: 0.0.0.0
+  port: 8080
+
+spring:
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+  datasource:
+    url: jdbc:postgresql://localhost:5432/chatlog
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    defer-datasource-initialization: true
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always
+
+
+elastic:
+  api:
+    key: ${ELASTIC_API_KEY}
+    url: ${ELASTIC_URL}

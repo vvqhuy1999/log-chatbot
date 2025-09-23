@@ -150,7 +150,7 @@
       
       <!-- Chat Header -->
       <div class="border-b p-4" :class="isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'">
-        <div class="max-w-4xl mx-auto flex items-center justify-between">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-medium">
               AI
@@ -174,7 +174,7 @@
 
       <!-- Messages Container -->
       <div class="flex-1 overflow-y-auto min-h-0 custom-scrollbar" :class="isDark ? 'scrollbar-dark' : 'scrollbar-light'" ref="messagesContainer">
-        <div class="max-w-4xl mx-auto">
+        <div class="max-w-5xl mx-auto">
           
           <!-- Welcome Message (when no messages) -->
           <div v-if="messages.length === 0" class="flex flex-col items-center justify-center h-full py-20">
@@ -190,7 +190,7 @@
           </div>
 
           <!-- Messages -->
-          <div v-else class="space-y-4 p-4">
+          <div v-else class="space-y-5 p-6">
             <div v-for="(block, index) in messageBlocks" :key="index">
               <!-- User block -->
               <div v-if="block.type === 'user'" class="flex justify-end mb-4">
@@ -297,7 +297,7 @@
 
           <!-- Comparison Results -->
           <div v-if="comparisonData && comparisonData.response_generation_comparison" class="p-4">
-            <div class="max-w-4xl mx-auto">
+            <div class="max-w-5xl mx-auto">
               <div class="mb-4">
                 <h3 class="text-lg font-semibold mb-2" :class="isDark ? 'text-white' : 'text-gray-900'">
                   🆚 Kết quả so sánh AI Models
@@ -380,7 +380,7 @@
             <div v-if="loading" 
                  class="group border-b transition-colors"
                  :class="isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
-              <div class="max-w-4xl mx-auto px-6 py-8 flex gap-6">
+              <div class="max-w-5xl mx-auto px-6 py-8 flex gap-6">
                 <div class="flex-shrink-0">
                   <div class="w-8 h-8 bg-green-500 rounded-sm flex items-center justify-center text-white text-sm font-medium">
                     AI
@@ -405,7 +405,7 @@
 
       <!-- Input Area -->
       <div class="flex-shrink-0 border-t p-4" :class="isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'">
-        <div class="max-w-4xl mx-auto">
+        <div class="max-w-5xl mx-auto">
           <form @submit.prevent="sendMessage" class="relative">
             <div class="relative flex items-center">
               <textarea
@@ -450,13 +450,11 @@
         </div>
       </div>
     </div>
-
     <!-- Mobile Sidebar Overlay -->
     <div v-if="!sidebarCollapsed" @click="sidebarCollapsed = true" 
          class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"></div>
   </div>
   
-  <!-- Loading fallback when user is not available -->
   <div v-else class="flex h-screen bg-gray-900 items-center justify-center">
     <div class="text-center">
       <div class="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -1182,8 +1180,7 @@ export default {
     
     const copyMessage = async (content) => {
       try {
-        await navigator.clipboard.writeText(content)
-        // Show success notification (optional)
+        await safeCopyToClipboard(content)
       } catch (error) {
         console.error('Failed to copy:', error)
       }
@@ -1199,10 +1196,43 @@ export default {
     const copyQuery = async (raw) => {
       const code = extractFirstCodeBlock(raw) || raw || ''
       try {
-        await navigator.clipboard.writeText(code)
+        await safeCopyToClipboard(code)
       } catch (error) {
         console.error('Failed to copy query:', error)
       }
+    }
+
+    const safeCopyToClipboard = async (text) => {
+      const clip = typeof navigator !== 'undefined' ? navigator.clipboard : undefined
+      // Preferred modern API when available and in secure context
+      if (clip && typeof clip.writeText === 'function') {
+        try {
+          await clip.writeText(text)
+          return
+        } catch (e) {
+          // Fall through to legacy method
+        }
+      }
+      // Legacy fallback using a hidden textarea
+      return new Promise((resolve, reject) => {
+        try {
+          const textarea = document.createElement('textarea')
+          textarea.value = text
+          textarea.setAttribute('readonly', '')
+          textarea.style.position = 'fixed'
+          textarea.style.top = '-1000px'
+          textarea.style.left = '-1000px'
+          document.body.appendChild(textarea)
+          textarea.select()
+          textarea.setSelectionRange(0, textarea.value.length)
+          const succeeded = document.execCommand('copy')
+          document.body.removeChild(textarea)
+          if (succeeded) resolve(undefined)
+          else reject(new Error('execCommand copy failed'))
+        } catch (err) {
+          reject(err)
+        }
+      })
     }
     
     // Delete chat session
