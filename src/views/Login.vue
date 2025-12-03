@@ -107,9 +107,9 @@ export default {
       loading.value = true
       
       try {
-        console.log('Attempting login with:', loginForm.value)
+        // console.log('Attempting login with:', loginForm.value)
         const result = await login(loginForm.value)
-        console.log('Login successful, result:', result)
+        // console.log('Login successful, result:', result)
         
         successMessage.value = 'Đăng nhập thành công!'
         
@@ -117,7 +117,7 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 100))
         
         // Force redirect to chat page
-        console.log('Redirecting to chat...')
+        // console.log('Redirecting to chat...')
         await router.replace('/')
         
       } catch (error) {

@@ -19,14 +19,14 @@ export const useAuthStore = () => {
   
   const login = async (credentials) => {
     try {
-      console.log('Calling API:', api.defaults.baseURL + '/api/auth/login')
-      console.log('With credentials:', credentials)
+      // console.log('Calling API:', api.defaults.baseURL + '/api/auth/login')
+      // console.log('With credentials:', credentials)
       
       const response = await api.post('/api/auth/login', credentials)
-      console.log('API Response:', response)
+      // console.log('API Response:', response)
       
       const data = response.data
-      console.log('Response data:', data)
+      // console.log('Response data:', data)
       
       // Xử lý response từ backend Spring Boot
       if (!data.success) {
@@ -42,15 +42,15 @@ export const useAuthStore = () => {
         avatar: userData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || data.username || credentials.username)}&background=059669&color=fff`
       }
       
-      console.log('Processed user object:', processedUser)
+      // console.log('Processed user object:', processedUser)
 
       state.user = processedUser
       state.isAuthenticated = true
       
       // Lưu vào localStorage
       localStorage.setItem('chatgpt-user', JSON.stringify(processedUser))
-      console.log('User saved to localStorage:', processedUser)
-      console.log('localStorage check:', localStorage.getItem('chatgpt-user'))
+      // console.log('User saved to localStorage:', processedUser)
+      // console.log('localStorage check:', localStorage.getItem('chatgpt-user'))
       
       return processedUser
     } catch (error) {
@@ -83,15 +83,15 @@ export const useAuthStore = () => {
   }
   
   const checkAuth = async () => {
-    console.log('checkAuth called')
+    // console.log('checkAuth called')
     const savedUser = localStorage.getItem('chatgpt-user')
-    console.log('savedUser from localStorage:', savedUser)
+    // console.log('savedUser from localStorage:', savedUser)
     
     // Kiểm tra nếu savedUser tồn tại và không phải là chuỗi "undefined"
     if (savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
       try {
         const parsedUser = JSON.parse(savedUser)
-        console.log('parsedUser:', parsedUser)
+        // console.log('parsedUser:', parsedUser)
         
         // Đảm bảo parsedUser là object hợp lệ
         if (parsedUser && typeof parsedUser === 'object' && (parsedUser.id || parsedUser.username)) {
@@ -104,19 +104,19 @@ export const useAuthStore = () => {
             if (response.data.authenticated) {
               state.user = parsedUser
               state.isAuthenticated = true
-              console.log('Auth restored successfully:', parsedUser)
+              // console.log('Auth restored successfully:', parsedUser)
             } else {
               throw new Error('Session expired')
             }
           } catch (error) {
-            console.log('Backend verification failed, clearing auth:', error)
+            // console.log('Backend verification failed, clearing auth:', error)
             // Nếu backend không xác thực được, xóa localStorage
             localStorage.removeItem('chatgpt-user')
             state.user = null
             state.isAuthenticated = false
           }
         } else {
-          console.log('Invalid user object, removing from localStorage')
+          // console.log('Invalid user object, removing from localStorage')
           // Nếu không phải object hợp lệ, xóa localStorage
           localStorage.removeItem('chatgpt-user')
           state.user = null
@@ -130,7 +130,7 @@ export const useAuthStore = () => {
         state.isAuthenticated = false
       }
     } else {
-      console.log('No valid saved user found')
+      // console.log('No valid saved user found')
       // Xóa localStorage nếu có giá trị không hợp lệ
       if (savedUser === 'undefined' || savedUser === 'null') {
         localStorage.removeItem('chatgpt-user')
@@ -139,7 +139,7 @@ export const useAuthStore = () => {
       state.isAuthenticated = false
     }
     
-    console.log('checkAuth result - isAuthenticated:', state.isAuthenticated, 'user:', state.user)
+    // console.log('checkAuth result - isAuthenticated:', state.isAuthenticated, 'user:', state.user)
   }
   
   return {

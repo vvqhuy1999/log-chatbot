@@ -472,7 +472,7 @@ import axios from 'axios'
 // Create API instance
 // Use relative URL in development (will use Vite proxy), absolute URL in production
 const apiBaseUrl = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080')
-console.log('🔗 API Base URL:', apiBaseUrl, '(DEV mode:', import.meta.env.DEV, ')')
+// console.log('🔗 API Base URL:', apiBaseUrl, '(DEV mode:', import.meta.env.DEV, ')')
 
 const api = axios.create({
   baseURL: apiBaseUrl,
@@ -593,13 +593,13 @@ export default {
     // Start comparison by sending the first message directly
     const startComparisonDirect = async (content) => {
       try {
-        console.log('Starting comparison via /api/chat-messages/start-comparison with content:', content)
+        // console.log('Starting comparison via /api/chat-messages/start-comparison with content:', content)
         const response = await api.post('/api/chat-messages/start-comparison', { message: content })
-        console.log('start-comparison response status:', response.status, 'data:', response.data)
+        // console.log('start-comparison response status:', response.status, 'data:', response.data)
         const newSessionId = response?.data?.sessionId || response?.data?.data?.sessionId || response?.data?.session?.id
         if (newSessionId) {
           currentSessionId.value = newSessionId
-          console.log('Comparison started, sessionId:', newSessionId)
+          // console.log('Comparison started, sessionId:', newSessionId)
 
           // Poll for messages (same logic as startNewSession)
           let attempts = 0
@@ -607,7 +607,7 @@ export default {
           const pollStartTime = Date.now()
           const pollForInitialResponse = async () => {
             attempts++
-            console.log(`Polling for initial response attempt ${attempts}/${maxAttempts}`)
+            // console.log(`Polling for initial response attempt ${attempts}/${maxAttempts}`)
             const latestMessages = await getLatestMessages(newSessionId)
             if (latestMessages.length > 0) {
               messages.value = latestMessages
@@ -633,7 +633,7 @@ export default {
         }
 
         // If backend doesn't return sessionId, infer by reloading sessions and taking the most recent
-        console.log('No sessionId in start-comparison response; inferring from sessions list...')
+        // console.log('No sessionId in start-comparison response; inferring from sessions list...')
         await loadChatSessions()
         if (chatHistory.value.length > 0) {
           // Pick the session with latest lastActiveAt/createdAt
@@ -647,7 +647,7 @@ export default {
           if (inferred && inferred.sessionId) {
             currentSessionId.value = inferred.sessionId
             currentChatIndex.value = idx
-            console.log('Inferred sessionId:', inferred.sessionId, 'at index', idx)
+            // console.log('Inferred sessionId:', inferred.sessionId, 'at index', idx)
             // Start polling messages for inferred session
             let attempts = 0
             const maxAttempts = Math.ceil(MAX_POLL_DURATION_MS / POLL_INTERVAL_MS)
@@ -693,12 +693,12 @@ export default {
           message: content
         })
         
-        console.log('Comparison message sent to API:', response.data)
+        // console.log('Comparison message sent to API:', response.data)
         
         // Store comparison data for display
         if (response.data && response.data.mode === 'comparison') {
           comparisonData.value = response.data
-          console.log('Comparison data stored:', response.data)
+          // console.log('Comparison data stored:', response.data)
         }
         
         retrying.value = false
@@ -709,7 +709,7 @@ export default {
         // Retry on timeout or network errors
         if (retryCount < maxRetries && (error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR')) {
           retrying.value = true
-          console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`)
+          // console.log(`Retrying in 2 seconds... (${retryCount + 1}/${maxRetries})`)
           await new Promise(resolve => setTimeout(resolve, 2000))
           return sendMessageToAPI(sessionId, content, retryCount + 1)
         }
@@ -747,7 +747,7 @@ export default {
             timestamp: new Date(msg.timestamp)
           }))
           
-          console.log(`Retrieved ${apiMessages.length} messages from API`)
+          // console.log(`Retrieved ${apiMessages.length} messages from API`)
           return apiMessages
         }
         return []
@@ -756,7 +756,7 @@ export default {
         
         // Retry on timeout or network errors
         if (retryCount < maxRetries && (error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR')) {
-          console.log(`Retrying get messages in 1 second... (${retryCount + 1}/${maxRetries})`)
+          // console.log(`Retrying get messages in 1 second... (${retryCount + 1}/${maxRetries})`)
           await new Promise(resolve => setTimeout(resolve, 1000))
           return getLatestMessages(sessionId, retryCount + 1)
         }
@@ -773,7 +773,7 @@ export default {
       
       // If this is the first message and no session exists, start a new session
       if (!currentSessionId.value && messages.value.length === 0) {
-        console.log('Starting new session for first message...')
+        // console.log('Starting new session for first message...')
         
         // Don't add user message to UI yet, wait for session creation and AI response
         input.value = ''
@@ -814,14 +814,14 @@ export default {
 
       // Send message to API if we have a session ID
       if (currentSessionId.value) {
-        console.log(`Sending comparison message to session ${currentSessionId.value}:`, userInput)
+        // console.log(`Sending comparison message to session ${currentSessionId.value}:`, userInput)
         
         // Send user message to API
         const apiResponse = await sendMessageToAPI(currentSessionId.value, userInput)
         
         if (apiResponse) {
           // Wait a bit for backend to process and generate AI response
-          console.log('Waiting for AI response...')
+          // console.log('Waiting for AI response...')
           
           // Poll for new messages every 2 seconds, up to 10 minutes total
           let attempts = 0
@@ -830,13 +830,13 @@ export default {
           
           const pollForResponse = async () => {
             attempts++
-            console.log(`Polling attempt ${attempts}/${maxAttempts}`)
+            // console.log(`Polling attempt ${attempts}/${maxAttempts}`)
             
             const latestMessages = await getLatestMessages(currentSessionId.value)
             
             // Check if we have more messages than before (including AI response)
             if (latestMessages.length > messages.value.length) {
-              console.log('AI response received!')
+              // console.log('AI response received!')
               messages.value = latestMessages
               
               // Try to get comparison data from the latest message if available
@@ -853,7 +853,7 @@ export default {
             
             // If max polling duration reached, stop polling
             if (Date.now() - pollStartTime >= MAX_POLL_DURATION_MS) {
-              console.log('Max polling duration reached (timeout), stopping...')
+              // console.log('Max polling duration reached (timeout), stopping...')
               loading.value = false
               return
             }
@@ -918,7 +918,7 @@ export default {
         // Force reflow to ensure the change takes effect
         textarea.offsetHeight
         
-        console.log('Textarea height reset to 48px, current height:', textarea.style.height)
+        // console.log('Textarea height reset to 48px, current height:', textarea.style.height)
       }
     }
     
@@ -949,14 +949,14 @@ export default {
     }
     
     const newChat = () => {
-      console.log('🆕 Creating new chat...')
+      // console.log('🆕 Creating new chat...')
       messages.value = []
       currentChatIndex.value = null
       currentSessionId.value = null
       comparisonData.value = null
       input.value = ''
       // Reload chat sessions to get any new ones
-      console.log('🔄 Reloading chat sessions after new chat...')
+      // console.log('🔄 Reloading chat sessions after new chat...')
       loadChatSessions()
     }
     
@@ -990,7 +990,7 @@ export default {
           chatHistory.value[index].messages = apiMessages
           messages.value = apiMessages
           
-          console.log(`Loaded ${apiMessages.length} messages for session ${chat.sessionId}`)
+          // console.log(`Loaded ${apiMessages.length} messages for session ${chat.sessionId}`)
         } else {
           // No messages found, set empty array
           chatHistory.value[index].messages = []
@@ -1032,7 +1032,7 @@ export default {
           const tb = (b.lastActiveAt || b.createdAt || new Date(0)).getTime()
           return tb - ta
         })
-        console.log('Updated chat history for session:', updatedChat.sessionId)
+        // console.log('Updated chat history for session:', updatedChat.sessionId)
       }
     }
 
@@ -1242,7 +1242,7 @@ export default {
       }
       
       try {
-        console.log(`Deleting session ${sessionId}...`)
+        // console.log(`Deleting session ${sessionId}...`)
         await api.delete(`/api/chat-sessions/${sessionId}`)
         
         // Remove from local chat history
@@ -1259,7 +1259,7 @@ export default {
           currentChatIndex.value--
         }
         
-        console.log(`Session ${sessionId} deleted successfully`)
+        // console.log(`Session ${sessionId} deleted successfully`)
       } catch (error) {
         console.error('Error deleting session:', error)
         alert('Có lỗi xảy ra khi xóa cuộc trò chuyện. Vui lòng thử lại.')
@@ -1267,10 +1267,10 @@ export default {
     }
     
     const handleLogout = async () => {
-      console.log('Logout button clicked')
+      // console.log('Logout button clicked')
       try {
         await logout()
-        console.log('Logout successful')
+        // console.log('Logout successful')
         router.push('/login')
       } catch (error) {
         console.error('Logout error:', error)
